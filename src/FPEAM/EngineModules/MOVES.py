@@ -1432,31 +1432,33 @@ class MOVES(Module):
 
         return(scenario_id)
 
-   def _get_results_fips(moves_output_db, year, month, day):
-
-       _results_fips_sql = """SELECT DISTINCT LEFT(dist_table.MOVESScenarioID, 5) AS fips
-            FROM {moves_output_db}.rateperdistance AS dist_table
-              INNER JOIN (SELECT DISTINCT LEFT(dist.MOVESScenarioID, 5) AS fips, MOVESRunID
-                          FROM {moves_output_db}.rateperdistance dist
-                    INNER JOIN (SELECT LEFT(MOVESScenarioID, 5) AS fips, MOVESScenarioID, MAX(MOVESRunID) AS max_id
-                                FROM {moves_output_db}.rateperdistance
-                                GROUP BY LEFT(MOVESScenarioID, 5)) q
-                            ON dist.MOVESRunID = q.max_id
-								AND LEFT(dist.MOVESScenarioID, 5) = LEFT(q.MOVESScenarioID, 5)) runid_filter
-                  ON dist_table.MOVESRunID =
-                  runid_filter.MOVESRunID
-            WHERE dist_table.yearID = {year} AND dist_table.monthID IN ({month})
-             AND dist_table.dayID = {day};""".format(**kvals)
-
-       _fips_cached = pd.read_sql(_results_fips_sql, self.conn)
-
-       return(_fips_cached)
-
     def _get_cached_results(self):
         """
 
         :return: list of FIPS for which MOVES results already exist
         """
+
+        def _get_results_fips(moves_output_db, year, month, day):
+           # @TODO: this should probably also look at ratepervehicle to make sure each FIPS is in both tables
+
+            kvals = {'moves_output_db': moves_output_db, 'year': year, 'month': tuple(month), 'day': day}
+            _results_fips_sql = """SELECT DISTINCT LEFT(dist_table.MOVESScenarioID, 5) AS fips
+                FROM {moves_output_db}.rateperdistance AS dist_table
+                  INNER JOIN (SELECT DISTINCT LEFT(dist.MOVESScenarioID, 5) AS fips, MOVESRunID
+                              FROM {moves_output_db}.rateperdistance dist
+                        INNER JOIN (SELECT LEFT(MOVESScenarioID, 5) AS fips, MOVESScenarioID, MAX(MOVESRunID) AS max_id
+                                    FROM {moves_output_db}.rateperdistance
+                                    GROUP BY LEFT(MOVESScenarioID, 5)) q
+                                ON dist.MOVESRunID = q.max_id
+	    							AND LEFT(dist.MOVESScenarioID, 5) = LEFT(q.MOVESScenarioID, 5)) runid_filter
+                      ON dist_table.MOVESRunID =
+                      runid_filter.MOVESRunID
+                WHERE dist_table.yearID = {year} AND dist_table.monthID IN {month}
+                 AND dist_table.dayID = {day};""".format(**kvals)
+
+            _fips_cached = pd.read_sql(_results_fips_sql, self.conn)
+
+            return(_fips_cached)
 
         _results =_get_results_fips(moves_output_db=self.moves_output_db,
                                     year=self.year,
@@ -1999,17 +2001,8 @@ class MOVES(Module):
             # downselect moves_run_list based on which FIPS already have results
             # in the moves output database
 
-            # get a list of FIPS with results in the MOVES output database
-            import pdb; pdb.set_trace()
-#            self.scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
-#                                                           day=self.day,
-#                                                           month='_'.join([str(_) for _ in self.month]),
-#                                                           year=self.year)
-
-            _exclude_fips = self._get_cached_results(fips=self.moves_run_list.MOVES_run_fips.unique(),
-                                                     day=self.day,
-                                                     month=self.month,
-                                                     year=self.year)
+            LOGGER.info('checking for existing results')
+            _exclude_fips = self._get_cached_results()
 
             _kvals = {'h': self.config.get('moves_db_host'),
                       'db': self.config.get('moves_database'),
