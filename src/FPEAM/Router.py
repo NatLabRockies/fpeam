@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from networkx.algorithms.shortest_paths.weighted import bidirectional_dijkstra
-from scipy.spatial import ckdtree
+from scipy.spatial import cKDTree
 
 from FPEAM import utils
 
@@ -23,7 +23,7 @@ class Router(object):
         """
 
         self.node_map = node_map
-        self._btree = ckdtree.cKDTree(np.array(list(zip(self.node_map.x, self.node_map.y))))
+        self._btree = cKDTree(np.array(list(zip(self.node_map.x, self.node_map.y))))
 
         self.edges = edges
 
