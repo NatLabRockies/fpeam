@@ -207,15 +207,16 @@ class FPEAM(object):
                                                                                       'on farm transport'])]
 
         # calculate total remaining fraction by feedstock by multiplying
-        # the remaining fractions
-        _loss_factors = _loss_factors.groupby(['feedstock'],
-                                              as_index=False).prod()[['feedstock',
-                                                                      'dry_matter_remaining']]
+        # the remaining fractions; select numeric columns only to avoid
+        # pandas 2.x TypeError on string columns
+        _loss_factors = _loss_factors[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # calculate total remaining fraction at farm gate
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False).prod()[['feedstock',
-                                                                                        'dry_matter_remaining']]
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # subset the feedstock production df by which feedstock measures
         # will be used in normalizing pollutant amounts

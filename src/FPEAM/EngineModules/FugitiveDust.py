@@ -137,10 +137,11 @@ class FugitiveDust(Module):
             self.feedstock_loss_factors.supply_chain_stage.isin(['farm gate'])]
 
         # calculate total losses on farm, remove unnecessary columns
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False)
-        _loss_factors_farmgate = _loss_factors_farmgate.prod()[['feedstock',
-                                                                'dry_matter_remaining']]
+        # select only numeric-compatible columns before .prod() to avoid
+        # pandas 2.x TypeError on string columns
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # grab relevant prod data frame - preprocessed in init
         _prod = self.prod_onroad
