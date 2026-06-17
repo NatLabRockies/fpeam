@@ -58,7 +58,7 @@ class Router(object):
         _end_point_idx = self._btree.query(_end_point, k=1)[1]
         to_node = self.node_map.loc[_end_point_idx, 'node_id']
 
-        if not (from_node and to_node):
+        if from_node is None or to_node is None:
             raise ValueError('start or end node is undefined')
 
         _path = self.algorithm(self.Graph, from_node, to_node)[1]

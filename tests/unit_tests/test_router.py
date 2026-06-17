@@ -65,3 +65,27 @@ class TestRouterSmoke:
         # (0.01, 0.01) is closest to node 1 (0, 0)
         result = small_router.get_route(start=(0.01, 0.01), end=(0.99, 2.01))
         assert not result.empty
+
+
+@pytest.fixture(scope='module')
+def router_with_node_zero():
+    """Graph where valid node IDs start at 0 (exposes the 'if not node_id' false-positive)."""
+    import pandas as pd
+    edges = pd.DataFrame([
+        {'edge_id': 1, 'statefp': '17', 'countyfp': '001',
+         'u_of_edge': 0, 'v_of_edge': 1, 'weight': 1000.0, 'fclass': 1},
+    ])
+    node_map = pd.DataFrame([
+        {'node_id': 0, 'x': 0.0, 'y': 0.0},
+        {'node_id': 1, 'x': 0.0, 'y': 1.0},
+    ])
+    return Router(edges=edges, node_map=node_map, memory=None)
+
+
+class TestRouterNodeZero:
+
+    def test_route_from_node_zero_does_not_raise(self, router_with_node_zero):
+        """A graph with node_id=0 must not raise 'node is undefined' ValueError."""
+        result = router_with_node_zero.get_route(start=(0.0, 0.0), end=(0.0, 1.0))
+        assert not result.empty
+        assert '17001' in result['region_transportation'].values
