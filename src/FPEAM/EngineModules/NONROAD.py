@@ -170,7 +170,6 @@ class NONROAD(Module):
         self.production = self.production.merge(self.state_fips_map,
                                                 how='inner',
                                                 on='state_fips')
-
         # create filter to select only the feedstock measure used by NONROAD
         _prod_filter = self.production.feedstock_measure == \
             self.feedstock_measure_type
