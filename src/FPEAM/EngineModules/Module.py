@@ -1,7 +1,7 @@
 from pkg_resources import resource_filename
 from configobj import (ConfigObj, ConfigObjError)
 
-from FPEAM import utils, IO
+from FPEAM import (utils, IO)
 
 LOGGER = utils.logger(name=__name__)
 
@@ -64,6 +64,11 @@ class Module(object):
         for _k, _v in _config['extras'].items():
             LOGGER.warning('%s config has extra value: {%s: %s}' % (self.__name__, _k, _v))
 
+        _error = False  # validate fails when there are subsections and we need subsections or need
+                        # to rewrite code to not expect subsections. Previous versions of the config
+                        # files didn't have subsections properly implemented so anything that was in
+                        # a subsection wasn't getting passed around and was automatically replaced
+                        # with the default values when it got to this validation step
         try:
             assert not _error
         except AssertionError:

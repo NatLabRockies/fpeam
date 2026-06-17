@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from FPEAM import utils
-from FPEAM.Module import Module
-from FPEAM.Data import FugitiveDustFactors, TruckCapacity, SiltContent,\
+from .Module import Module
+from ..Data import FugitiveDustFactors, TruckCapacity, SiltContent,\
     FugitiveDustOnroadConstants
 
 LOGGER = utils.logger(name=__name__)

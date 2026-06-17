@@ -56,7 +56,7 @@ def main():
         _console.setLevel(logging.DEBUG)
     else:
         _console.setLevel(logging.INFO)
-    _console.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
+    _console.setFormatter(logging.Formatter('%(name)-12s %(lineno)s: %(levelname)-8s: %(message)s'))
     logging.getLogger('').addHandler(_console)
 
     # load config options

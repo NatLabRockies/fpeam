@@ -8,9 +8,9 @@ import pymysql
 from pkg_resources import resource_filename
 
 from FPEAM import utils
-from FPEAM.Module import Module
-from FPEAM.Data import (RegionFipsMap, StateFipsMap, NONROADEquipment, Irrigation)
-from FPEAM.IO import DATA_FOLDER
+from .Module import Module
+from ..Data import (RegionFipsMap, StateFipsMap, NONROADEquipment, Irrigation)
+from ..IO import DATA_FOLDER
 
 LOGGER = utils.logger(name=__name__)
 
@@ -59,6 +59,7 @@ class NONROAD(Module):
 
         # open connection to NONROAD database for input/output
         self._conn = pymysql.connect(host=self.config.get('nonroad_db_host'),
+                                     port=self.config.get('nonroad_db_port'),
                                      user=self.config.get('nonroad_db_user'),
                                      password=self.config.get('nonroad_db_pass'),
                                      db=self.config.get('nonroad_database'),
@@ -169,7 +170,6 @@ class NONROAD(Module):
         self.production = self.production.merge(self.state_fips_map,
                                                 how='inner',
                                                 on='state_fips')
-
         # create filter to select only the feedstock measure used by NONROAD
         _prod_filter = self.production.feedstock_measure == \
             self.feedstock_measure_type
@@ -1026,7 +1026,7 @@ T4M       1.0       0.02247
         # read in nrsourceusetype table to get the hp range IDs, hp averages,
         # and hours used per year (annual activity used to calculate
         # population) by SCC
-        _nrsourceusetype_sql = """SELECT SCC, NRHPRangeBinID,
+        _nrsourceusetype_sql = """SELECT SCC, NRHPRangeBinID, 
             medianLifeFullLoad, hoursUsedPerYear, hpAvg
             FROM {nonroad_database}.nrsourceusetype;""".format(**kvals)
 

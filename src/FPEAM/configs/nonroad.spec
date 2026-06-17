@@ -39,6 +39,7 @@ irrigation = filepath(default='data/inputs/irrigation.csv')
 
 ### NONROAD database connection options
 nonroad_database = string(default='movesdb20220802')
+nonroad_db_port = integer(default=3306)
 nonroad_db_user = string(default='root')
 nonroad_db_pass = string(default='root')
 nonroad_db_host = string(default='localhost')

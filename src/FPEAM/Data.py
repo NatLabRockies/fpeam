@@ -1,7 +1,7 @@
 import pandas as pd
 
-from FPEAM import utils
-from FPEAM.IO import load
+from . import utils
+from .IO import load
 
 LOGGER = utils.logger(name=__name__)
 
