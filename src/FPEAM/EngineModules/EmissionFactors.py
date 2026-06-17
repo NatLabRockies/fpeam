@@ -1,6 +1,6 @@
-from FPEAM.Module import Module
-from FPEAM import utils
-from FPEAM.Data import (EmissionFactor, ResourceDistribution)
+from .Module import Module
+from .. import utils
+from ..Data import (EmissionFactor, ResourceDistribution)
 
 LOGGER = utils.logger(name=__name__)
 
@@ -33,6 +33,7 @@ class EmissionFactors(Module):
 
         # Selector for the crop amount that scales emission factors
         self.feedstock_measure_type = self.config.get('feedstock_measure_type')
+
         # merge emissions factors and resource subtype distribution
         # dataframes by matching resource and resource subtype
         _factors_merge = self.resource_distribution.merge(self.emission_factors,
@@ -75,8 +76,8 @@ class EmissionFactors(Module):
         # combine production and equipment and overall factors
         _df = self.production[_prod_rows][_prod_columns].merge(self.equipment[_equip_columns],
                                                                on=_idx,
-                                                               suffixes=['_prod', '_equip'])
-        _df = _df.merge(self.overall_factors[_factors_columns], on=['feedstock', 'resource'])
+                                                               suffixes=['_prod', '_equip'])\
+            .merge(self.overall_factors[_factors_columns], on=['feedstock', 'resource'])
 
         # calculate emissions
         _df.eval('pollutant_amount = overall_rate * feedstock_amount * rate',

@@ -38,7 +38,6 @@ def validate_config(config, spec):
 
     _validator = Validator()
     _validator.functions['filepath'] = filepath
-    
     _config = ConfigObj(config, configspec=spec, stringify=True)
     _result = _config.validate(_validator, preserve_errors=True)
 
@@ -129,20 +128,20 @@ class VdtPathDoesNotExist(VdtValueError):
         """
         >>> raise VdtPathDoesNotExist('/not/a/path')
         Traceback (most recent call last):
-        VdtPathDoesNotExist: the path "/not/a/path" does not exist
+        VdtValueTooSmallError: the path "/not/a/path" does not exist
         """
 
         ValidateError.__init__(self, 'the path "%s" does not exist' % (value, ))
 
 
 class VdtPathTooLong(VdtValueError):
-    """The value supplied has too many characters."""
+    """The value supplied has too many characteres."""
 
     def __init__(self, value, max_length):
         """
         >>> raise VdtPathTooLong('/path/too/long')
         Traceback (most recent call last):
-        VdtPathTooLong: the path "/path/too/long" exceeds the maximum length of <length> characters
+        VdtValueTooSmallError: the path "/path/too/long" exceeds the maximum length of <length> characters
         """
 
         ValidateError.__init__(self, 'the path "%s" exceeds the maximum length of %s characters' % (value, max_length))
