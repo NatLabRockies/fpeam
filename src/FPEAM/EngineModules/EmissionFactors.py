@@ -41,7 +41,9 @@ class EmissionFactors(Module):
 
         # calculate overall rate as the product of the resource subtype
         # distributions and the subtype-specific emission factors
-        _factors_merge.eval('overall_rate = distribution * rate', inplace=True)
+        _factors_merge = _factors_merge.assign(
+            overall_rate=_factors_merge['distribution'] * _factors_merge['rate']
+        )
 
         # sum emissions factors within unique combinations of
         # feedstock-activity-resource-pollutant to generate overall factors
@@ -80,8 +82,7 @@ class EmissionFactors(Module):
             .merge(self.overall_factors[_factors_columns], on=['feedstock', 'resource'])
 
         # calculate emissions
-        _df.eval('pollutant_amount = overall_rate * feedstock_amount * rate',
-                 inplace=True)
+        _df = _df.assign(pollutant_amount=_df['overall_rate'] * _df['feedstock_amount'] * _df['rate'])
 
         # add column to identify the module
         _df['module'] = 'emission factors'

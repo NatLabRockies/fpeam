@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import tempfile
 from collections.abc import Iterable
@@ -47,7 +46,8 @@ class FPEAM(object):
 
         self.router = None
 
-        self._temp_dir = tempfile.mkdtemp()
+        self._temp_dir_obj = tempfile.TemporaryDirectory()
+        self._temp_dir = self._temp_dir_obj.name
 
         self.memory = Memory(location=self._temp_dir)
 
@@ -444,7 +444,10 @@ class FPEAM(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        shutil.rmtree(self._temp_dir)
+        try:
+            self._temp_dir_obj.cleanup()
+        except Exception:
+            LOGGER.warning('failed to clean up temp directory: %s' % self._temp_dir)
 
         # process exceptions
         if exc_type is not None:

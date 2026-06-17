@@ -93,7 +93,7 @@ class FugitiveDust(Module):
         _df = self.prod_onfarm.merge(self.fugitive_dust_factors, on=self.prod_idx)
 
         # calculate fugitive dust
-        _df.eval('pollutant_amount = feedstock_amount * rate', inplace=True)
+        _df = _df.assign(pollutant_amount=_df['feedstock_amount'] * _df['rate'])
 
         # add column to identify module
         _df['module'] = 'fugitive dust'
