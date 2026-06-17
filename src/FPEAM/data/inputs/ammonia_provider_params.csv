@@ -1,0 +1,6 @@
+resource_subtype,base_rate_nh3,t_ref_c,w_ref_m_s,p_ref_mm
+anhydrous ammonia,0.040,15,2,0
+ammonium nitrate,0.008,15,2,0
+ammonium sulfate,0.088,15,2,0
+urea,0.025,15,2,0
+nitrogen solutions,0.028,15,2,0
