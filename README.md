@@ -73,6 +73,12 @@ moves_db_pass = <your password>   # never use a default here
 - Source layout: `src/FPEAM/` (package root), `src/FPEAM/EngineModules/` (MOVES, NONROAD, EmissionFactors, FugitiveDust).
 - CI runs on push/PR to `dev` and `master` via `.github/workflows/test.yml`.
 - Contributing: branch off `dev`, open a PR targeting `dev`.
+- Architecture overview: [`docs/architecture.md`](docs/architecture.md)
+- Output file reference: [`docs/outputs.md`](docs/outputs.md)
+
+## GUI (legacy)
+
+`src/FPEAM/gui/` contains a PyQt5 graphical interface (`AllModuleTab.py`) developed for Windows. It is **not tested or exercised by CI** and should be considered unmaintained. All current functionality is accessible through the CLI or Python API.
 
 ---
 

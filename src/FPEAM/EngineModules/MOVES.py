@@ -1,4 +1,3 @@
-import pdb
 import os
 
 import numpy as np
@@ -2225,13 +2224,15 @@ class MOVES(Module):
                 LOGGER.debug('import file: %s' % self.xmlimport_filename)
 
                 # import data and log output
-                command = 'cd {moves_path} & setenv.bat & ' \
-                          'java -Xmx512M ' \
-                          '-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" ' \
-                          'gov.epa.otaq.moves.master.commandline.MOVESCommandLine' \
-                          ' -i {import_file}' \
-                          ''.format(moves_path=self.moves_path,
-                                    import_file=self.xmlimport_filename)
+                command = (
+                    r'cd {moves_path} & setenv.bat & '
+                    r'java -Xmx512M '
+                    r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
+                    r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+                    r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
+                    r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine'
+                    r' -i {import_file}'
+                ).format(moves_path=self.moves_path, import_file=self.xmlimport_filename)
                 os.system(command)  # @TODO: need to capture output, catch errors
 
                 # fix I/M Program flag
@@ -2256,12 +2257,15 @@ class MOVES(Module):
                 LOGGER.info('running MOVES for FIPS: %s' % _fips)
                 LOGGER.debug('runspec file: %s' % self.runspec_filename)
 
-                command = 'cd {moves_folder} & setenv.bat & ' \
-                          'java -Xmx512M ' \
-                          '-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" ' \
-                          'gov.epa.otaq.moves.master.commandline.MOVESCommandLine ' \
-                          '-r {run_moves}'.format(moves_folder=self.moves_path,
-                                                  run_moves=self.runspec_filename)
+                command = (
+                    r'cd {moves_folder} & setenv.bat & '
+                    r'java -Xmx512M '
+                    r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
+                    r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+                    r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
+                    r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine '
+                    r'-r {run_moves}'
+                ).format(moves_folder=self.moves_path, run_moves=self.runspec_filename)
 
                 os.system(command)  # @TODO: need to capture output, catch errors
 

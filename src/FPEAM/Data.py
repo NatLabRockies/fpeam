@@ -63,8 +63,8 @@ class Data(pd.DataFrame):
             # count the total values
             _count_total = self[column].__len__()
 
-            # fill the missing values with zeros
-            self[column].fillna(value, inplace=True)
+            # fill the missing values
+            self[column] = self[column].fillna(value)
 
             # log a warning with the number of missing values
             LOGGER.warning('%s of %s data values in %s.%s were backfilled as %s' %
