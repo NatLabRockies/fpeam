@@ -1,10 +1,27 @@
 from .Module import Module
 from .. import utils
-from ..Data import (EmissionFactor, ResourceDistribution)
+from ..Data import (EmissionFactor, ResourceDistribution, GeophysicalContext)
+from ..EmissionFactorProviders import EmissionFactorProvider, TableProvider
 
 import pandas as pd
 
 LOGGER = utils.logger(name=__name__)
+
+_BUILTIN_PROVIDERS = {
+    'table': None,  # resolved lazily below to avoid circular import at module level
+    'ammonia_fertilizer': 'FPEAM.EmissionFactorProviders.ammonia.AmmoniaFertilizerProvider',
+}
+
+
+def _resolve_provider(name: str):
+    """Return the provider class for a given name or dotted import path."""
+    dotted = _BUILTIN_PROVIDERS.get(name, name)
+    if dotted is None:
+        return None  # 'table' sentinel — use TableProvider
+    parts = dotted.rsplit('.', 1)
+    import importlib
+    mod = importlib.import_module(parts[0])
+    return getattr(mod, parts[1])
 
 
 class EmissionFactors(Module):
@@ -78,6 +95,26 @@ class EmissionFactors(Module):
         if self._has_region_factors:
             LOGGER.info('EmissionFactors loaded with region-keyed factors; '
                         'national rows (region=NaN) will be used as fallback.')
+
+        # Load optional geophysical context and configure provider
+        _provider_name = (self.config.get('provider') or 'table').strip()
+        _context_path = (self.config.get('geophysical_context') or '').strip()
+        _params_path = (self.config.get('provider_params') or '').strip()
+
+        self._geophysical_context = None
+        if _context_path:
+            self._geophysical_context = GeophysicalContext(fpath=_context_path, backfill=False)
+
+        if _provider_name == 'table':
+            self._provider = TableProvider(self.overall_factors)
+        else:
+            _provider_cls = _resolve_provider(_provider_name)
+            if _provider_cls is None:
+                LOGGER.warning('Unknown provider "%s"; falling back to TableProvider.', _provider_name)
+                self._provider = TableProvider(self.overall_factors)
+            else:
+                self._provider = _provider_cls(params=_params_path if _params_path else None)
+                LOGGER.info('EmissionFactors using dynamic provider: %s', _provider_name)
 
     def get_emissions(self):
         """

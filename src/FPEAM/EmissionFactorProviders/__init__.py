@@ -24,5 +24,6 @@ Third-party providers should subclass EmissionFactorProvider and implement
 
 from .base import EmissionFactorProvider
 from .table import TableProvider
+from .ammonia import AmmoniaFertilizerProvider
 
-__all__ = ['EmissionFactorProvider', 'TableProvider']
+__all__ = ['EmissionFactorProvider', 'TableProvider', 'AmmoniaFertilizerProvider']

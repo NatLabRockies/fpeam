@@ -121,4 +121,8 @@ PYTHONPATH=src python -m pytest tests/
 
 CI runs on push/PR to `dev` and `master` via `.github/workflows/test.yml`.
 
-Current coverage: `test_data`, `test_io`, `test_emissionfactors`, `test_emissionfactors_extended`, `test_router`, `test_fugitivedust`.
+Current coverage: `test_data`, `test_io`, `test_emissionfactors`, `test_emissionfactors_extended`, `test_router`, `test_fugitivedust`, `test_region_emission_factors`, `test_provider_interface`, `test_geophysical_context`, `test_ammonia_provider`.
+
+## Dynamic emission-factor providers
+
+See [`docs/emission_factor_providers.md`](emission_factor_providers.md) for the full provider architecture, `AmmoniaFertilizerProvider` documentation, geophysical context schema, and a guide to writing custom providers.
