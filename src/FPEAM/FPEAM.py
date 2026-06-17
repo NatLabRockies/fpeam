@@ -10,15 +10,19 @@ else:
 
 import geopandas
 import pandas as pd
-from FPEAM import EngineModules
+#import EngineModules
+from FPEAM.EmissionFactors import EmissionFactors
+from FPEAM.FugitiveDust import FugitiveDust
+from FPEAM.MOVES import MOVES
+from FPEAM.NONROAD import NONROAD
 from joblib import Memory
 from pkg_resources import resource_filename
 from shapely.geometry import MultiPolygon
 
-from . import Data
-from . import utils
-from .IO import (CONFIG_FOLDER, load_configs)
-from .Router import Router
+from FPEAM import Data
+from FPEAM import utils
+from FPEAM.IO import (CONFIG_FOLDER, load_configs)
+from FPEAM.Router import Router
 
 LOGGER = utils.logger(name=__name__)
 
@@ -28,10 +32,10 @@ class FPEAM(object):
 
     __version__ = '2.4.0'
 
-    MODULES = {'emissionfactors': EngineModules.EmissionFactors,
-               'fugitivedust': EngineModules.FugitiveDust,
-               'MOVES': EngineModules.MOVES,
-               'NONROAD': EngineModules.NONROAD}
+    MODULES = {'emissionfactors': EmissionFactors,
+               'fugitivedust': FugitiveDust,
+               'MOVES': MOVES,
+               'NONROAD': NONROAD}
 
     def __init__(self, run_config):
 
@@ -210,14 +214,12 @@ class FPEAM(object):
 
         # calculate total remaining fraction by feedstock by multiplying
         # the remaining fractions
-        _loss_factors = _loss_factors.groupby(['feedstock'],
-                                              as_index=False).prod()[['feedstock',
-                                                                      'dry_matter_remaining']]
+        _loss_factors = _loss_factors[['feedstock', 'dry_matter_remaining']].groupby(['feedstock'],
+                                              as_index=False).prod()
 
         # calculate total remaining fraction at farm gate
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False).prod()[['feedstock',
-                                                                                        'dry_matter_remaining']]
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']].groupby(['feedstock'],
+                                                                as_index=False).prod()
 
         # subset the feedstock production df by which feedstock measures
         # will be used in normalizing pollutant amounts
@@ -266,18 +268,16 @@ class FPEAM(object):
         del _prod_losses['dry_matter_remaining'], _prod_losses_farmgate['dry_matter_remaining']
 
         # tack on the delivered feedstock dataframes to the filtered one
-        _prod_filtered.append(_prod_losses, ignore_index=True, sort=False)
-        _prod_filtered.append(_prod_losses_farmgate, ignore_index=True,
-                              sort=False)
+        _prod_filtered = pd.concat([_prod_filtered, _prod_losses, _prod_losses_farmgate])
 
         # loop thru all modules being run and stack the data frames
         # containing output from each module
         # this will add empty values if a data frame is missing a column,
         # which does happend for some id variables from some modules
         for _module in modules or self._modules.values():
-            _df_modules = _df_modules.append(_module.results,
-                                             ignore_index=True,
-                                             sort=False)
+            _dfs = []
+            _dfs.append(_module.results)
+            _df_modules = pd.concat(_dfs)
 
         _df_modules['unit_numerator'] = 'lb pollutant'
         _df_modules['unit_denominator'] = 'county-year'
