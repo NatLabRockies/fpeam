@@ -259,10 +259,11 @@ class FugitiveDust(Module):
                     _vmt_by_county_all_routes = _vmt_by_county
 
                 else:
-                    _vmt_by_county_all_routes = \
-                        _vmt_by_county_all_routes.append(_vmt_by_county,
-                                                         ignore_index=True,
-                                                         sort=True)
+                    _vmt_by_county_all_routes = pd.concat(
+                        [_vmt_by_county_all_routes, _vmt_by_county],
+                        ignore_index=True,
+                        sort=True,
+                    )
 
             # @todo what's fclass and is this the correct treatment?
             _vmt_by_county_all_routes = _vmt_by_county_all_routes.groupby(['region_transportation',
@@ -373,9 +374,11 @@ class FugitiveDust(Module):
             _status = 'failed'
         else:
             _status = 'complete'
-            _results = _results_onfarm.append(_results_onroad,
-                                              ignore_index=True,
-                                              sort=False)
+            _results = pd.concat(
+                [_results_onfarm, _results_onroad],
+                ignore_index=True,
+                sort=False,
+            )
         finally:
             self.status = _status
             self.results = _results

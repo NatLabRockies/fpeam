@@ -241,9 +241,11 @@ class NONROAD(Module):
                                    inplace=True)
 
         # append the irrigation activity data to the rest of the activity data
-        self.prod_equip_merge = self.prod_equip_merge.append(_prod_irr,
-                                                             ignore_index=True,
-                                                             sort=True)
+        self.prod_equip_merge = pd.concat(
+            [self.prod_equip_merge, _prod_irr],
+            ignore_index=True,
+            sort=True,
+        )
 
         # create list of unique state-feedstock-tillage type-activity
         # combinations - one population file, one allocation file and
@@ -1305,7 +1307,7 @@ FIPS       Year  SCC        Equipment Description                    HPmn  HPmx 
 
                 # append the results of this nonroad run to the full nonroad
                 #  output dataframe
-                _nr_out = _nr_out.append(_to_append, ignore_index=True)
+                _nr_out = pd.concat([_nr_out, _to_append], ignore_index=True)
 
         # calculate voc emissions in (short) tons
         _nr_out['voc'] = _nr_out.thc * self.diesel_thc_voc_conversion

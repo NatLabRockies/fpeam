@@ -268,18 +268,22 @@ class FPEAM(object):
         del _prod_losses['dry_matter_remaining'], _prod_losses_farmgate['dry_matter_remaining']
 
         # tack on the delivered feedstock dataframes to the filtered one
-        _prod_filtered.append(_prod_losses, ignore_index=True, sort=False)
-        _prod_filtered.append(_prod_losses_farmgate, ignore_index=True,
-                              sort=False)
+        _prod_filtered = pd.concat(
+            [_prod_filtered, _prod_losses, _prod_losses_farmgate],
+            ignore_index=True,
+            sort=False,
+        )
 
         # loop thru all modules being run and stack the data frames
         # containing output from each module
         # this will add empty values if a data frame is missing a column,
         # which does happend for some id variables from some modules
         for _module in modules or self._modules.values():
-            _df_modules = _df_modules.append(_module.results,
-                                             ignore_index=True,
-                                             sort=False)
+            _df_modules = pd.concat(
+                [_df_modules, _module.results],
+                ignore_index=True,
+                sort=False,
+            )
 
         _df_modules['unit_numerator'] = 'lb pollutant'
         _df_modules['unit_denominator'] = 'county-year'
