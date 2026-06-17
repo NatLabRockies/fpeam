@@ -27,6 +27,22 @@ class EmissionFactors(Module):
         self.emission_factors = EmissionFactor(fpath=self.config.get('emission_factors'),
                                                backfill=backfill)
 
+        # Check that emission factor units are the expected lb/lb contract.
+        # Other units are not currently supported; warn loudly rather than
+        # silently produce wrong results.
+        _unexpected_units = self.emission_factors[
+            (self.emission_factors['unit_numerator'].str.lower() != 'pound') |
+            (self.emission_factors['unit_denominator'].str.lower() != 'pound')
+        ]
+        if not _unexpected_units.empty:
+            LOGGER.warning(
+                'EmissionFactors assumes lb_pollutant/lb_resource units but '
+                '%d rows have different units: %s',
+                len(_unexpected_units),
+                _unexpected_units[['resource', 'resource_subtype',
+                                   'unit_numerator', 'unit_denominator']].to_dict('records'),
+            )
+
         # Resource subtype distribution, Units: unit-less fraction
         self.resource_distribution = ResourceDistribution(fpath=self.config.get('resource_distribution'),
                                                           backfill=backfill)
