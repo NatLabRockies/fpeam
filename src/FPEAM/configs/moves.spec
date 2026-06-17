@@ -47,8 +47,12 @@ moves_version = string(default='MOVES3')
 ## this directory contains all input files created for MOVES runs
 moves_datafiles_path = filepath(default='C:/MOVESdata', max_length=30)
 
-## use this path to specify which version of MOVES should be run
+## use this path to specify which version of MOVES should be run (Windows: C:/MOVES3.0)
 moves_path = filepath(default='C:/MOVES3.0')
+
+## root of the MOVES source build tree (macOS/Linux: ~/dev/epa/EPA_MOVES_Model)
+## ignored on Windows (moves_path is used instead)
+moves_home = string(default='')
 
 
 ### MySQL options
