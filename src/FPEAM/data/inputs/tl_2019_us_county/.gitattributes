@@ -1,0 +1,7 @@
+tl_2019_us_county.shp.ea.iso.xml filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.shp.iso.xml filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.shx filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.cpg filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.dbf filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.prj filter=lfs diff=lfs merge=lfs -text
+tl_2019_us_county.shp filter=lfs diff=lfs merge=lfs -text

@@ -33,25 +33,24 @@ year = integer(default='2017')
 moves_db_host = string(default='localhost')
 moves_db_user = string(default='root')
 moves_db_pass = string(default='root')
-moves_database = string(default='movesdb20161117')
+moves_database = string(default='movesdb2220802')
 moves_output_db = string(default='moves_output_db')
 
 
 ### MOVES application options
 
 ## the moves version used only for human reference; it's ignored by MOVES
-moves_version = string(default='MOVES')
+moves_version = string(default='MOVES3')
 
 ## this directory contains all input files created for MOVES runs
-moves_datafiles_path = filepath(default='C:\MOVESdata', max_length=30)
+moves_datafiles_path = filepath(default='C:/MOVESdata', max_length=30)
 
 ## use this path to specify which version of MOVES should be run
-moves_path = filepath(default='C:\MOVES2014b')
+moves_path = filepath(default='C:/MOVES3.0')
 
 
 ### MySQL options
-mysql_binary = filepath(default='C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe')
-mysqldump_binary = filepath(default='C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqldump.exe')
+mysql_binary = filepath(default='C:/Program Files/MariaDB/MariaDB 10.4/mariadb.exe')
 
 
 ### input files
@@ -83,6 +82,7 @@ ending_hour = integer(1, 24, default=18)
 [pollutant_dict]
 NH3 = integer(default=30)
 CO = integer(default=2)
+CO2 = integer(default=98)
 NOX = integer(default=3)
 PM10 = integer(default=100)
 PM25 = integer(default=110)

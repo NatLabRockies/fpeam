@@ -1,5 +1,11 @@
 name: fpeam
 dependencies:
+- geopandas
+- scipy
+- joblib
+- seaborn
+- matplotlib
+- PyQt5
 - configobj
 - lxml
 - networkx

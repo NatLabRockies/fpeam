@@ -1,15 +1,11 @@
 import logging
 import os
-import random
-import string
 import sys
 import tempfile
 import threading
 import time
-import datetime
 
 import numpy as np
-import pandas as pd
 import seaborn as sns
 from AttributeValueStorage import AttributeValueStorage
 from FPEAM import (IO, FPEAM)
@@ -124,7 +120,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # add README link to top left of tab
         self.homeHelpLink = QLabel()
-        self.homeHelpLink.setText(self.createLink("https://github.com/NREL/fpeam/tree/dev#home",
+        self.homeHelpLink.setText(self.createLink("https://github.com/NREL/fpeam/tree/master#home",
                                                   "Readme"))
         self.homeHelpLink.setOpenExternalLinks(True)
         self.homeHelpLink.setFixedHeight(30)
@@ -225,7 +221,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Custom Data Filepaths Label - HOME Page
         self.customDataFilepathsLabel = QLabel()
-        self.customDataFilepathsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#custom-data-filepaths",
+        self.customDataFilepathsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#custom-data-filepaths",
                                                                      "Custom Data Filepaths"))
         self.customDataFilepathsLabel.setOpenExternalLinks(True)
         self.customDataFilepathsLabel.setFixedHeight(30)
@@ -416,7 +412,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Advanced Options Label - HOME
         self.advOptionsLabel = QLabel()
-        self.advOptionsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#advanced-options",
+        self.advOptionsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#advanced-options",
                                                             "Advanced Options"))
         self.advOptionsLabel.setOpenExternalLinks(True)
         self.advOptionsLabel.setFixedHeight(30)
@@ -756,7 +752,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # add link to readme in upper-left-hand corner of tab
         self.moveshelplink = QLabel()
-        self.moveshelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/dev#moves",
+        self.moveshelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/master#moves",
                                                    "Readme"))
         self.moveshelplink.setOpenExternalLinks(True)
         self.moveshelplink.setFixedHeight(30)
@@ -852,7 +848,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Database Connection Parameters Label
         self.dbConnectionParaLabel = QLabel()
-        self.dbConnectionParaLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#database-connection-parameters",
+        self.dbConnectionParaLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#database-connection-parameters",
                                                                   "Database Connection Parameters"))
         self.dbConnectionParaLabel.setOpenExternalLinks(True)
         self.dbConnectionParaLabel.setFixedHeight(30)
@@ -1059,7 +1055,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Execution Timeframe Label
         self.executionTimeLabel = QLabel()
-        self.executionTimeLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#execution-timeframe",
+        self.executionTimeLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#execution-timeframe",
                                                                "Execution Timeframe"))
         self.executionTimeLabel.setOpenExternalLinks(True)
         self.executionTimeLabel.setFixedHeight(30)
@@ -1256,7 +1252,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Custom Data Filepaths Label MOVES
         self.customDataFilepathsLabelM = QLabel()
-        self.customDataFilepathsLabelM.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#custom-data-filepaths-1",
+        self.customDataFilepathsLabelM.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#custom-data-filepaths-1",
                                                                       "Custom Data Filepaths"))
         self.customDataFilepathsLabelM.setOpenExternalLinks(True)
         self.customDataFilepathsLabelM.setFixedHeight(30)
@@ -1355,7 +1351,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Created UI element VMT Fractions
         self.labelVMTFraction = QLabel()
-        self.labelVMTFraction.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#vmt-fractions",
+        self.labelVMTFraction.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#vmt-fractions",
                                                              "VMT Fractions"))
         self.labelVMTFraction.setOpenExternalLinks(True)
         self.labelVMTFraction.setToolTip("Fraction of vehicle miles traveled (VMT) by road type (must sum to 1)")
@@ -1496,7 +1492,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Advanced Options Label MOVES
         self.advOptionsLabelM = QLabel()
-        self.advOptionsLabelM.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#advanced-options-1",
+        self.advOptionsLabelM.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#advanced-options-1",
                                                              "Advanced Options"))
         self.advOptionsLabelM.setOpenExternalLinks(True)
         self.advOptionsLabelM.setFixedHeight(30)
@@ -1712,7 +1708,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # add link to readme in upper-left-hand corner of tab
         self.nonroadhelplink = QLabel()
-        self.nonroadhelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/dev#nonroad",
+        self.nonroadhelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/master#nonroad",
                                                    "Readme"))
         self.nonroadhelplink.setOpenExternalLinks(True)
         self.nonroadhelplink.setFixedHeight(30)
@@ -1775,7 +1771,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Database Connection Parameters Label NONROAD
         self.dbConnectionParaLabelN = QLabel()
-        self.dbConnectionParaLabelN.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#database-connection-parameters-1",
+        self.dbConnectionParaLabelN.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#database-connection-parameters-1",
                                                                    "Database Connection Parameters"))
         self.dbConnectionParaLabelN.setOpenExternalLinks(True)
         self.dbConnectionParaLabelN.setFixedHeight(30)
@@ -1915,7 +1911,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Data Label
         self.dataLabel = QLabel()
-        self.dataLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#data-labels",
+        self.dataLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#data-labels",
                                                       "Data Labels"))
         self.dataLabel.setOpenExternalLinks(True)
         self.dataLabel.setFixedHeight(30)
@@ -2064,7 +2060,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Custom Data Filepaths Label
         self.cusromDatafileLabel = QLabel()
-        self.cusromDatafileLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#custom-data-filepaths-2",
+        self.cusromDatafileLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#custom-data-filepaths-2",
                                                                 "Custom Data Filepaths"))
         self.cusromDatafileLabel.setOpenExternalLinks(True)
         self.cusromDatafileLabel.setFixedHeight(30)
@@ -2186,7 +2182,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Operating Temperature Label
         self.opTempLabel = QLabel()
-        self.opTempLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#operating-temperature",
+        self.opTempLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#operating-temperature",
                                                         "Operating Temperature"))
         self.opTempLabel.setOpenExternalLinks(True)
         self.opTempLabel.setFixedHeight(30)
@@ -2303,7 +2299,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Conversion Factors Label
         self.convFactorsLabel = QLabel()
-        self.convFactorsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#conversion-factors",
+        self.convFactorsLabel.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#conversion-factors",
                                                              "Conversion Factors"))
         self.convFactorsLabel.setOpenExternalLinks(True)
         self.convFactorsLabel.setFixedHeight(30)
@@ -2446,7 +2442,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Advanced Options Label
         self.advOptionsLabelN = QLabel()
-        self.advOptionsLabelN.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#advanced-options-2",
+        self.advOptionsLabelN.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#advanced-options-2",
                                                              "Advanced Options"))
         self.advOptionsLabelN.setOpenExternalLinks(True)
         self.advOptionsLabelN.setFixedHeight(30)
@@ -2673,7 +2669,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # link to readme in upper left corner
         self.emfactorhelplink = QLabel()
-        self.emfactorhelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/dev#emission-factors",
+        self.emfactorhelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/master#emission-factors",
                                                       "Readme"))
         self.emfactorhelplink.setOpenExternalLinks(True)
         self.emfactorhelplink.setFixedHeight(30)
@@ -2701,7 +2697,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Custom Data Filepaths Label EF
         self.customDataFilepathLabelEF = QLabel()
-        self.customDataFilepathLabelEF.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#custom-data-filepaths-3",
+        self.customDataFilepathLabelEF.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#custom-data-filepaths-3",
                                                                       "Custom Data Filepaths"))
         self.customDataFilepathLabelEF.setOpenExternalLinks(True)
         self.customDataFilepathLabelEF.setFixedHeight(30)
@@ -2944,7 +2940,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # link to readme section
         self.fugdusthelplink = QLabel()
-        self.fugdusthelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/dev#fugitive-dust",
+        self.fugdusthelplink.setText(self.createLink("https://github.com/NREL/fpeam/tree/master#fugitive-dust",
                                                      "Readme"))
         self.fugdusthelplink.setOpenExternalLinks(True)
         self.fugdusthelplink.setFixedHeight(30)
@@ -2992,7 +2988,7 @@ class AlltabsModule(QtWidgets.QWidget):
 
         # Custom Data Filepaths Label FD
         self.customDataFilepathLabelFD = QLabel()
-        self.customDataFilepathLabelFD.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/dev#custom-data-filepaths-4",
+        self.customDataFilepathLabelFD.setText(self.createHeadingLink("https://github.com/NREL/fpeam/tree/master#custom-data-filepaths-4",
                                                                       "Custom Data Filepaths"))
         self.customDataFilepathLabelFD.setOpenExternalLinks(True)
         self.customDataFilepathLabelFD.setFixedHeight(30)

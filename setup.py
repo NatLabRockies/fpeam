@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 
 setup(
     name='FPEAM',
-    version='2.3.0-beta',
+    version='2.5.0',
     license='BSD 2-Clause License',
     description='Feedstock Production Emissions to Air Model',
     long_description='%s\n%s' % (
@@ -48,7 +48,7 @@ setup(
     zip_safe=True,
     classifiers=[
         # complete classifier list: http://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Free To Use But Restricted',
         'Natural Language :: English',
@@ -73,7 +73,11 @@ setup(
         'pymysql',
         'lxml',
         'joblib',
-        'scipy'
+        'scipy',
+        'matplotlib',
+        'seaborn',
+        'PyQt5',
+        'geopandas'
     ],
     entry_points={
         'console_scripts': [

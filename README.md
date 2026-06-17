@@ -41,6 +41,8 @@ FPEAM scenarios can be defined and run either through the graphical user interfa
 
 ## Graphical user interface
 
+To open the GUI, first install FPEAM according to the instructions below. After installing, there are two options for running the GUI. Option one is to open the file `AllModuleTab.py`, located in `fpeam/src/FPEAM/gui` in PyCharm, Spyder or another Python integrated developement environment (IDE) and run the file from the IDE. Option two is to open a command prompt or Anaconda prompt (recommended) in the same directory, and execute `python AllModuleTab.py`. Either option will open the GUI and allow scenarios to be run.
+
 The FPEAM GUI was developed to be relatively self-explanatory with an easy to follow workflow. Upon opening the GUI, users will need to specify a scenario name (it is recommended to use unique scenario names for every FPEAM run), a project path where output files are saved, and which modules to run.
 
 Inputs for each module are entered on the module's tab. All tabs are pre-populated with default values such that users should need to enter custom values for relatively few inputs. Users may work through the tabs in any order before returning to the Home tab and clicking the Run button to generate results. The Reset button, also on the Home tab, will return all inputs to their default values.
@@ -110,7 +112,7 @@ Each sub-section goes over one of the GUI tabs.
 
 ## Home 
 
-![Screenshot of the Home tab on the GUI, with all sections expanded and all inputs as they appear when the GUI is first opened.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/home-top.PNG)
+![Screenshot of the Home tab on the GUI, with all sections expanded and all inputs as they appear when the GUI is first opened.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/home-top.PNG)
 
 The Home tab contains the only required inputs for running a scenario, which are the scenario name and the project path. All other inputs are pre-populated with default values, such that FPEAM can quickly be run for a basic, nationwide feedstock production scenario.
 
@@ -126,7 +128,7 @@ All other inputs on the Home tab are parameter values and input datasets that ar
 
 ### Custom Data Filepaths
 
-![Screenshot of the Custom Data Filepaths section on the Home tab](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/home-customdatafilepaths.PNG)
+![Screenshot of the Custom Data Filepaths section on the Home tab](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/home-customdatafilepaths.PNG)
 
 **Equipment use**. The equipment dataset defines the agricultural activities involved in feedstock production. Columns and data types in this dataset are defined in the table below. The equipment dataset defines the equipment used for each agricultural activity (in the default equipment dataset, activities consist of establishment, maintenance, harvest and loading, but additional or alternate activities may be specified as needed) as well as the resources consumed, such as fuel, time, fertilizer, and other agricultural chemicals. Resource rate (amount) units in the equipment dataset must correspond with the units in the feedstock production dataset discussed below, or an error will be given when the data is read into FPEAM. For each activity that involves agricultural equipment, the equipment name must be provided. These are user-defined names that are matched to NONROAD equipment types with the `nonroad_equipment` file discussed further in the NONROAD module section.
 
@@ -239,7 +241,7 @@ The truck capacity value for forest residues was also used as a proxy value for 
 
 ### Advanced Options
 
-![Screenshot of the Advanced Options section on the Home Tab](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/home-advancedoptions.PNG)
+![Screenshot of the Advanced Options section on the Home Tab](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/home-advancedoptions.PNG)
 
 **Logging Level**. Select the level of log messages to be displayed in the Results tab and written to a log file as FPEAM runs.
 
@@ -253,7 +255,7 @@ The truck capacity value for forest residues was also used as a proxy value for 
 
 ## MOVES
 
-![Screenshot of the top of the MOVES tab](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-top.PNG)
+![Screenshot of the top of the MOVES tab](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-top.PNG)
 
 Emissions from feedstock transportation are by default calculated using version 2014b of the EPA's MOtor Vehicle Emission Simulator (MOVES) model. FPEAM creates all required input files and runs MOVES in batch mode, using a set of parameters listed below to determine at what level of detail MOVES is run. Following the MOVES run(s), emission rates for vehicle operation and start and hotelling are postprocessed with feedstock production data, truck capacity data and feedstock transportation routes to calculate total pollutant amounts.
 
@@ -271,7 +273,7 @@ Currently the FPEAM MOVES module can only run MOVES at the FIPS (county) level. 
 
 ### Database Connection Parameters
 
-![Screenshot of the Database Connection Parameters section of the MOVES tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-databaseconnectionparams.PNG)
+![Screenshot of the Database Connection Parameters section of the MOVES tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-databaseconnectionparams.PNG)
 
 **Database Host**. The Host is the machine on which the MOVES databases are installed. For users running FPEAM locally, the database host should always be left as the default.
 
@@ -285,7 +287,7 @@ Currently the FPEAM MOVES module can only run MOVES at the FIPS (county) level. 
 
 ### Execution Timeframe
 
-![Screenshot of the Execution Timeframe section of the MOVES tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-executiontimeframe.PNG)
+![Screenshot of the Execution Timeframe section of the MOVES tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-executiontimeframe.PNG)
 
 **Analysis Year**. The year in which feedstock is grown and harvested. This value must match the analysis year defined on the NONROAD tab, and should correspond to the year of the feedstock production dataset being used. If the MOVES and NONROAD years do not match, then FPEAM cannot be run.
 
@@ -299,7 +301,7 @@ This execution timeframe represents a typical post-harvest day for most feedstoc
 
 ### Custom Data Filepaths
 
-![Screenshot of the Custom Data Filepaths section of the MOVES tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-customdatafilepaths.PNG)
+![Screenshot of the Custom Data Filepaths section of the MOVES tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-customdatafilepaths.PNG)
 
 **AVFT**. This dataset ("Alternative Vehicle and Fuels Technology") defines the vehicle fleet  in use during the execution timeframe. Custom AVFT files can be generated using MOVES itself; however, the default file should suffice for present-day and near-future scenarios.
 
@@ -307,7 +309,7 @@ This execution timeframe represents a typical post-harvest day for most feedstoc
 
 ### VMT Fractions
 
-![Screenshot of the VMT Fractions section of the MOVES tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-vmtfractions.PNG)
+![Screenshot of the VMT Fractions section of the MOVES tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-vmtfractions.PNG)
 
 **Restricted** roads are accessed by entrance and exit ramps, including highways. **Unrestricted** roads are all other roads. 
 
@@ -325,7 +327,7 @@ TABLE: Default VMT fraction values.
 
 ### Advanced Options
 
-![Screenshot of the Advanced Options section of the MOVES tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/moves-advancedoptions.PNG)
+![Screenshot of the Advanced Options section of the MOVES tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/moves-advancedoptions.PNG)
 
 **Number of Trucks Used**. The number of trucks used for feedstock transportation. If this number is increased then emissions per vehicle and per vehicle start/stop will increase but emissions for vehicle miles traveled will remain the same. Changing this parameter is unlikely to have a significant impact on the overall pollutant inventory.
 
@@ -335,7 +337,7 @@ TABLE: Default VMT fraction values.
 
 ## NONROAD
 
-![Screenshot of the top of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-top.PNG)
+![Screenshot of the top of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-top.PNG)
 
 **Data Folder**. This directory is where the input and output files associated with NONROAD will be saved. Because NONROAD cannot parse filepaths longer than 30 characters, it is strongly recommended to create the `C:/Nonroad` directory rather than using a Documents or other directory.
 
@@ -345,13 +347,13 @@ TABLE: Default VMT fraction values.
 
 ### Database Connection Parameters
 
-![Screenshot of the Database Connection Parameters section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-databaseconnectionparams.PNG)
+![Screenshot of the Database Connection Parameters section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-databaseconnectionparams.PNG)
 
 These values should be identical to the same parameters under the MOVES tab. The **Database Name** refers to the default MOVES database, not the MOVES output database. NONROAD writes results to individual files rather than an output database, and so no output database needs to be specified.
 
 ### Data Labels
 
-![Screenshot of the Data Labels section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-datalabels.PNG)
+![Screenshot of the Data Labels section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-datalabels.PNG)
 
 **Feedstock Measure Type** and **Irrigation Feedstock Measure Type**. In the default equipment use dataset, many activities are defined by resource consumption per feedstock measure. The feedstock measure type parameters here define which measure should be used to scale up these activities to calculate total pollutants generated. In the default feedstock production datasets "harvested" is in units of acres, so this feedstock measure type is used to scale activities including fertilizer application, herbicide application, and plowing which are all given per acre in the equipment use dataset. For irrigation, we assume that the entire planted acreage is irrigated (where irrigation is used) and so the feedstock measure type used to scale irrigation activities is "planted". The units are still acres.
 
@@ -361,7 +363,7 @@ These values should be identical to the same parameters under the MOVES tab. The
 
 ### Custom Data Filepaths
 
-![Screenshot of the Custom Data Filepaths section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-customdatafilepaths.PNG)
+![Screenshot of the Custom Data Filepaths section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-customdatafilepaths.PNG)
 
 **Irrigation Activity**. This is the dataset derived from the 2012 Farm and Ranch Irrigation Survey, and gives pump use in hours per acre for irrigated corn grain, as well as pump specifications such as horsepower. 
 
@@ -380,31 +382,31 @@ TABLE: Sample entries from the nonroad_equipment input dataset. Equipment descri
 
 ### Operating Temperature
 
-![Screenshot of the Operating Temperature section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-operatingtemperature.PNG)
+![Screenshot of the Operating Temperature section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-operatingtemperature.PNG)
 
 These temperatures in degrees Fahrenheit give the minimum, maximum and mean expected ambient (outdoor) temperatures for operation of all agricultural and forestry equipment.
 
 ### Conversion Factors
 
-![Screenshot of the Conversion Factors section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-conversionfactors.PNG)
+![Screenshot of the Conversion Factors section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-conversionfactors.PNG)
 
 NONROAD does not directly calculate NH<sub>3</sub> emissions or volatile organic carbon (VOC) emissions or PM<sub>10</sub> emissions, thus these factors are necessary to calculate NH<sub>3</sub> emissions from total diesel consumption, VOC from total hydrocarbon emissions, and PM<sub>2.5</sub>emissions from PM<sub>10</sub> emissions. The NH<sub>3</sub> emission factor is sourced from the [COBRA Screening Model](https://www.epa.gov/statelocalclimate/co-benefits-risk-assessment-cobra-screening-model.) developed by the U.S. EPA, and the total hydrocarbon to VOC conversion factor is sourced from EPA NONROAD Conversion Factors for Hydrocarbon Emission Components. 
 
 ### Advanced Options
 
-![Screenshot of the Advanced Options section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/nonroad-advancedoptions.PNG)
+![Screenshot of the Advanced Options section of the NONROAD tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/nonroad-advancedoptions.PNG)
 
 **Encode Names**. NONROAD generates, reads and writes a great many input and output files as it runs. Because NONROAD cannot process filenames longer than 30 characters, the option to encode names converts longer filenames to abbreviated versions. If this option is set to False, NONROAD may not execute properly or may not return all of the expected results.
 
 ## Emission Factors
 
-![Screenshot of the top of the Emission Factors tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/emissionfactors-top.PNG)
+![Screenshot of the top of the Emission Factors tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/emissionfactors-top.PNG)
 
 **Feedstock Measure Type**. As seen previously, the Emission Factors calculation runs off a specific measure of feedstock, in this case `harvested` which is in units of acres. Acres are required because the emission factors calculation also uses resource rates from the equipment dataset, which are in units of mass per acre. An alternative to using `harvested` would be `planted`, although in the default feedstock production datasets the `planted` amounts tend to be higher than `harvested` (that is, more acreage is planted than is harvested) which may over-estimate some pollutants.
 
 ### Custom Data Filepaths
 
-![Screenshot of the Custom Data Filepaths section of the Emission Factors tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/emissionfactors-customdatafilepaths.PNG)
+![Screenshot of the Custom Data Filepaths section of the Emission Factors tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/emissionfactors-customdatafilepaths.PNG)
 
 **Emission Factors**. Default emission factors are provided for each relevant combination of resource subtype and pollutant, as demonstrated in the table below. The unit denominator (both unit columns refer to the emission factor) must match the resource unit from the equipment use dataset. For instance, if insecticide use is quantified as gallons per dry short ton of feedstock, the emission factor here must be in pounds of pollutant per gallon of insecticide. The activity column specifies which supply chain activity causes the resource use and thus the pollutant emissions.
 
@@ -446,13 +448,13 @@ TABLE: The default resource subtype distribution data file defines the nitrogen 
 
 ## Fugitive Dust
 
-![Screenshot of the top of the Fugitive Dust tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/fugitivedust-top.PNG)
+![Screenshot of the top of the Fugitive Dust tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/fugitivedust-top.PNG)
 
 **On-Farm Feedstock Measure Type** and **On-Road Feedstock Measure Type**. Fugitive dust generated on the farm is calculated from PM<sub>10</sub> and PM<sub>2.5</sub> rates per acre, while on-road fugitive dust is calculated from the number of trips required to transport the feedstock. Thus the on-farm fugitive dust is calculated from `harvested` feedstock (units of acres) while on-road fugitive dust is calculated from `production` (units of dry short tons).
 
 ### Custom Data Filepaths
 
-![Screenshot of the Custom Data Filepaths section of the Fugitive Dust tab.](https://github.com/NREL/fpeam/blob/dev/src/FPEAM/gui/screenshots/fugitivedust-customdatafilepaths.PNG)
+![Screenshot of the Custom Data Filepaths section of the Fugitive Dust tab.](https://github.com/NREL/fpeam/blob/master/src/FPEAM/gui/screenshots/fugitivedust-customdatafilepaths.PNG)
 
 **On-Farm Factors**. On-farm fugitive dust is calculated from PM<sub>10</sub> and PM<sub>2.5</ub> emission factors given in this dataset.
 

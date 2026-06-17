@@ -56,7 +56,6 @@ def movesConfigCreation(tmpFolder, attributeValueObj, scenario_name):
     
     ### MySQL options
     mysql_binary = '{mysql_bin_path}'
-    mysqldump_binary = '{mysqldump_bin_path}'
     
     
     ### input files
@@ -106,7 +105,6 @@ def movesConfigCreation(tmpFolder, attributeValueObj, scenario_name):
                                                year=attributeValueObj.yearMoves,
                                                moves_path=attributeValueObj.movesPath,
                                                mysql_bin_path=attributeValueObj.mysqlBinPath,
-                                               mysqldump_bin_path=attributeValueObj.mysqlDumpBinPath,
                                                moves_datafiles_path=attributeValueObj.movesDatafilesPath,
                                                moves_db_host=attributeValueObj.dbHost,
                                                moves_db_user=attributeValueObj.dbUsername,

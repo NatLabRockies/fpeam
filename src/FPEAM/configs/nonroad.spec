@@ -38,14 +38,14 @@ irrigation = filepath(default='data/inputs/irrigation.csv')
 
 
 ### NONROAD database connection options
-nonroad_database = string(default='movesdb20151028')
+nonroad_database = string(default='movesdb20220802')
 nonroad_db_user = string(default='root')
 nonroad_db_pass = string(default='root')
 nonroad_db_host = string(default='localhost')
 
 
 ### NONROAD application options
-nonroad_path = filepath(default='C:\MOVES2014b\NONROAD\NR08a\', max_length=30)
+nonroad_path = filepath(default='C:/MOVES3.0/NONROAD/NR08a/', max_length=30)
 nonroad_exe = string(default='NONROAD.exe')
 
 

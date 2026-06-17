@@ -1,17 +1,28 @@
 import os
 import shutil
+import sys
 import tempfile
-from collections import Iterable
 
+if sys.version_info[1] >= 10:
+    from collections.abc import Iterable
+else:
+    from collections import Iterable
+
+import geopandas
 import pandas as pd
+#import EngineModules
+from FPEAM.EmissionFactors import EmissionFactors
+from FPEAM.FugitiveDust import FugitiveDust
+from FPEAM.MOVES import MOVES
+from FPEAM.NONROAD import NONROAD
 from joblib import Memory
 from pkg_resources import resource_filename
+from shapely.geometry import MultiPolygon
 
-from FPEAM import EngineModules
-from . import Data
-from . import utils
-from .IO import (CONFIG_FOLDER, load_configs)
-from .Router import Router
+from FPEAM import Data
+from FPEAM import utils
+from FPEAM.IO import (CONFIG_FOLDER, load_configs)
+from FPEAM.Router import Router
 
 LOGGER = utils.logger(name=__name__)
 
@@ -19,12 +30,12 @@ LOGGER = utils.logger(name=__name__)
 class FPEAM(object):
     """Base class to hold shared information"""
 
-    __version__ = '2.3.0-beta'
+    __version__ = '2.4.0'
 
-    MODULES = {'emissionfactors': EngineModules.EmissionFactors,
-               'fugitivedust': EngineModules.FugitiveDust,
-               'MOVES': EngineModules.MOVES,
-               'NONROAD': EngineModules.NONROAD}
+    MODULES = {'emissionfactors': EmissionFactors,
+               'fugitivedust': FugitiveDust,
+               'MOVES': MOVES,
+               'NONROAD': NONROAD}
 
     def __init__(self, run_config):
 
@@ -51,7 +62,6 @@ class FPEAM(object):
         self.results = None
         self.summaries = {}
 
-        # @TODO: load and validate fpeam.ini; currently only run_config gets checked and loaded
         self.config = run_config
 
         # validate module names
@@ -137,10 +147,11 @@ class FPEAM(object):
         _spec = resource_filename('FPEAM', '%s/run_config.spec' % (CONFIG_FOLDER, ))
         _config = utils.validate_config(config=value['run_config'], spec=_spec)
 
-        _config['config']['fpeam'] = _fpeam_config
+        _config['config']['fpeam'] = _fpeam_config['config']
 
         if _config['extras']:
             LOGGER.warning('extra values: %s' % (_config['extras'], ))
+
         try:
             assert not _config['missing'] and not _config['errors']
         except AssertionError:
@@ -203,14 +214,12 @@ class FPEAM(object):
 
         # calculate total remaining fraction by feedstock by multiplying
         # the remaining fractions
-        _loss_factors = _loss_factors.groupby(['feedstock'],
-                                              as_index=False).prod()[['feedstock',
-                                                                      'dry_matter_remaining']]
+        _loss_factors = _loss_factors[['feedstock', 'dry_matter_remaining']].groupby(['feedstock'],
+                                              as_index=False).prod()
 
         # calculate total remaining fraction at farm gate
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False).prod()[['feedstock',
-                                                                                        'dry_matter_remaining']]
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']].groupby(['feedstock'],
+                                                                as_index=False).prod()
 
         # subset the feedstock production df by which feedstock measures
         # will be used in normalizing pollutant amounts
@@ -259,18 +268,16 @@ class FPEAM(object):
         del _prod_losses['dry_matter_remaining'], _prod_losses_farmgate['dry_matter_remaining']
 
         # tack on the delivered feedstock dataframes to the filtered one
-        _prod_filtered.append(_prod_losses, ignore_index=True, sort=False)
-        _prod_filtered.append(_prod_losses_farmgate, ignore_index=True,
-                              sort=False)
+        _prod_filtered = pd.concat([_prod_filtered, _prod_losses, _prod_losses_farmgate])
 
         # loop thru all modules being run and stack the data frames
         # containing output from each module
         # this will add empty values if a data frame is missing a column,
         # which does happend for some id variables from some modules
         for _module in modules or self._modules.values():
-            _df_modules = _df_modules.append(_module.results,
-                                             ignore_index=True,
-                                             sort=False)
+            _dfs = []
+            _dfs.append(_module.results)
+            _df_modules = pd.concat(_dfs)
 
         _df_modules['unit_numerator'] = 'lb pollutant'
         _df_modules['unit_denominator'] = 'county-year'
@@ -322,6 +329,30 @@ class FPEAM(object):
                                                                                   'pollutant_amount',
                                                                                   'unit_numerator',
                                                                                   'unit_denominator']]
+        if self.config['fpeam'].get('inmap_county_export', False) is True:
+            # save InMAP county-level output
+            _shp_fpath_in = resource_filename('FPEAM', 'data/inputs/tl_2019_us_county/tl_2019_us_county.shp')
+            _df = geopandas.read_file(_shp_fpath_in, dtype={'STATEFP': str, 'COUNTYFP': str, 'geometry': MultiPolygon})[['STATEFP', 'COUNTYFP', 'NAME', 'geometry']]
+            _df['region_production'] = _df.STATEFP + _df.COUNTYFP
+
+            _grp_df = _summarize_by_region_production[['region_production', 'pollutant', 'pollutant_amount']].groupby(['region_production', 'pollutant'], as_index=False).sum()
+            _grp_df_pivot = _grp_df.pivot(index='region_production', columns='pollutant', values='pollutant_amount')
+
+            _gdf_join = _df[['region_production', 'NAME', 'geometry']].join(other=_grp_df_pivot, on='region_production', how='right')
+
+            _gdf_join.rename(columns={'region_production': 'cnty_fips',
+                                      'NAME': 'cnty_name',
+                                      'co': 'CO',
+                                      'nh3': 'NH3',
+                                      'nox': 'NOx',
+                                      'pm10': 'PM10',
+                                      'pm25': 'PM2_5',
+                                      'so2': 'SO2',
+                                      'voc': 'VOC'}, inplace=True)
+
+            _shp_fname_out = '%s_county_inmap.shp' % self.config.get('scenario_name')
+            _shp_fpath_out = os.path.join(self.config.get('project_path'), _shp_fname_out)
+            _gdf_join.to_file(_shp_fpath_out)
 
         # feedstock-tillage type-region_production
         _results_to_normalize = self.results

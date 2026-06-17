@@ -11,3 +11,8 @@ nitrogen,nitrogen solutions,chemical application,nox,0.004909286,pound,pound
 nitrogen,nitrogen solutions,chemical application,nh3,0.028171429,pound,pound
 herbicide,generic herbicide,chemical application,voc,0.7506,pound,pound
 insecticide,generic insecticide,chemical application,voc,0.7506,pound,pound
+nitrogen,anhydrous ammonia,chemical application,co2eq,3.8242,pound,pound
+nitrogen,ammonium nitrate,chemical application,co2eq,1.6275,pound,pound
+nitrogen,ammonium sulfate,chemical application,co2eq,0.9858,pound,pound
+nitrogen,urea,chemical application,co2eq,2.1692,pound,pound
+nitrogen,nitrogen solutions,chemical application,co2eq,1.395,pound,pound
