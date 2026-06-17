@@ -17,6 +17,21 @@ LOGGER = utils.logger(name=__name__)
 
 _IS_WINDOWS = platform.system() == 'Windows'
 
+# Cache Homebrew prefix at import time (Linux/macOS only) so we avoid
+# shelling out to `brew` on every MOVES county run.
+def _get_homebrew_prefix():
+    _env = os.environ.get('HOMEBREW_PREFIX')
+    if _env:
+        return _env
+    if not _IS_WINDOWS:
+        try:
+            return subprocess.check_output(['brew', '--prefix'], text=True).strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+    return ''
+
+_HOMEBREW_PREFIX = _get_homebrew_prefix()
+
 
 def _build_macos_classpath(moves_home):
     """Build a Unix classpath string from the MOVES source tree.
@@ -88,25 +103,17 @@ def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=3600):
         If the MOVES process exits with a non-zero return code.
     """
     if _IS_WINDOWS:
-        # Windows: delegate to the existing batch-file approach via cmd
-        if flag == '-i':
-            cmd = (
-                r'cd {path} & setenv.bat & '
-                r'java -Xmx512M '
-                r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
-                r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
-                r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
-                r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
-            ).format(path=moves_path, flag=flag, file=mrs_file)
-        else:
-            cmd = (
-                r'cd {path} & setenv.bat & '
-                r'java -Xmx512M '
-                r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
-                r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
-                r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
-                r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
-            ).format(path=moves_path, flag=flag, file=mrs_file)
+        # Windows: delegate to the existing batch-file approach via cmd.
+        # Both import (-i) and run (-r) use the same classpath string; the
+        # flag and file differ.
+        cmd = (
+            r'cd {path} & setenv.bat & '
+            r'java -Xmx512M '
+            r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
+            r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+            r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
+            r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
+        ).format(path=moves_path, flag=flag, file=mrs_file)
         ret = os.system(cmd)
         if ret != 0:
             raise subprocess.CalledProcessError(ret, cmd)
@@ -114,11 +121,10 @@ def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=3600):
         # macOS / Linux: use subprocess with the build.xml classpath
         cp = _build_macos_classpath(moves_home)
 
-        # Set up environment: ensure JAVA_HOME and Homebrew PATH are present
+        # Set up environment: ensure JAVA_HOME and Homebrew PATH are present.
+        # Use the module-level cached prefix to avoid shelling out per county.
         env = os.environ.copy()
-        homebrew_prefix = subprocess.check_output(
-            ['brew', '--prefix'], text=True
-        ).strip() if not env.get('HOMEBREW_PREFIX') else env['HOMEBREW_PREFIX']
+        homebrew_prefix = _HOMEBREW_PREFIX
         java_home = env.get(
             'JAVA_HOME',
             os.path.join(homebrew_prefix,
