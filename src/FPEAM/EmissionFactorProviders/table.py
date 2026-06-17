@@ -45,6 +45,13 @@ class TableProvider(EmissionFactorProvider):
         The static table already contains national and (optionally) region-keyed
         rows.  The caller is responsible for performing any region-based join or
         national-fallback logic.
+
+        Note: RATE_COLUMNS does not include ``feedstock``.  The feedstock
+        dimension enters the calculation in ``EmissionFactors.get_emissions()``
+        via the resource_distribution merge that produced ``overall_factors``
+        before this provider was constructed.  Providers are intentionally
+        feedstock-agnostic; the same rates apply across all feedstocks that
+        use the same resource subtype.
         """
         result = self._factors[list(self.RATE_COLUMNS)].copy()
         self.validate_output(result)

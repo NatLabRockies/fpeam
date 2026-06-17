@@ -15,7 +15,20 @@ class Data(pd.DataFrame):
 
     INDEX_COLUMNS = []
 
+    @classmethod
+    def _column_types(cls):
+        """Return {name: type} dict derived from the class COLUMNS spec.
+
+        Using a classmethod instead of a mutable default argument avoids the
+        Python anti-pattern where a dict default is shared across all calls
+        and can be mutated silently.
+        """
+        return {d['name']: d['type'] for d in cls.COLUMNS}
+
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
+
+        if columns is None:
+            columns = type(self)._column_types()
 
         if df is not None:
             _df = pd.DataFrame(df)
@@ -126,9 +139,7 @@ class Equipment(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(Equipment, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
 
@@ -148,9 +159,7 @@ class Production(Data):
                {'name': 'destination_lon', 'type': float, 'index': False, 'backfill': None},
                {'name': 'destination_lat', 'type': float, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(Production, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: feedstock, region_production, feedstock_measure missing values trigger runtime error
@@ -162,9 +171,7 @@ class FeedstockLossFactors(Data):
                {'name': 'supply_chain_stage', 'type': str, 'index': True, 'backfill': None},
                {'name': 'dry_matter_loss', 'type': float, 'index': False, 'backfill': 0},)
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(FeedstockLossFactors, self).__init__(df=df, fpath=fpath, columns=columns,
                                                    backfill=backfill)
 
@@ -178,9 +185,7 @@ class ResourceDistribution(Data):
                {'name': 'resource_subtype', 'type': str, 'index': True, 'backfill': None},
                {'name': 'distribution', 'type': float, 'index': True, 'backfill': 0})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(ResourceDistribution, self).__init__(df=df, fpath=fpath, columns=columns,
                                                    backfill=backfill)
 
@@ -197,17 +202,18 @@ class EmissionFactor(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None},)
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         # If loading from file, include 'region' when the CSV has that column
         # so region-keyed factors are carried through unchanged.
-        if fpath is not None and 'region' not in columns:
-            import pandas as _pd
-            _header = _pd.read_csv(fpath, nrows=0).columns.tolist()
-            if 'region' in _header:
-                columns = dict(columns)
-                columns['region'] = str
+        if fpath is not None:
+            if columns is None:
+                columns = type(self)._column_types()
+            if 'region' not in columns:
+                import pandas as _pd
+                _header = _pd.read_csv(fpath, nrows=0).columns.tolist()
+                if 'region' in _header:
+                    columns = dict(columns)
+                    columns['region'] = str
         super(EmissionFactor, self).__init__(df=df, fpath=fpath, columns=columns,
                                              backfill=backfill)
 
@@ -223,9 +229,7 @@ class FugitiveDustFactors(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(FugitiveDustFactors, self).__init__(df=df, fpath=fpath,
                                                   columns=columns,
                                                   backfill=backfill)
@@ -238,9 +242,7 @@ class SiltContent(Data):
                {'name': 'st_fips', 'type': str, 'index': True, 'backfill': None},
                {'name': 'uprsm_pct_silt', 'type': float, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(SiltContent, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: missing st_fips values generate error
@@ -255,9 +257,7 @@ class FugitiveDustOnroadConstants(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(FugitiveDustOnroadConstants, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: missing constant, road_type, pollutant generate error
@@ -267,9 +267,7 @@ class SCCCodes(Data):
     COLUMNS = ({'name': 'resource_subtype', 'type': str, 'index': True, 'backfill': None},
                {'name': 'scc', 'type': str, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(SCCCodes, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: any missing values generate error
@@ -282,9 +280,7 @@ class NONROADEquipment(Data):
                {'name': 'equipment_description', 'type': str, 'index': False, 'backfill': None},
                {'name': 'nonroad_equipment_scc', 'type': str, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(NONROADEquipment, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -306,9 +302,7 @@ class Irrigation(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(Irrigation, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: missing equipment_horsepower values triggers error
@@ -324,9 +318,7 @@ class TransportationGraph(Data):
                {'name': 'weight', 'type': float, 'index': False, 'backfill': None},
                {'name': 'fclass', 'type': int, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(TransportationGraph, self).__init__(df=df, fpath=fpath, columns=columns,
                                                   backfill=backfill)
 
@@ -337,9 +329,7 @@ class TransportationNodeLocations(Data):
                {'name': 'x', 'type': float, 'index': False, 'backfill': None},
                {'name': 'y', 'type': float, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(TransportationNodeLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -349,9 +339,7 @@ class RegionFipsMap(Data):
     COLUMNS = ({'name': 'region', 'type': str, 'index': True, 'backfill': None},
                {'name': 'fips', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(RegionFipsMap, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     def validate(self):
@@ -378,9 +366,7 @@ class StateFipsMap(Data):
     COLUMNS = ({'name': 'state_abbreviation', 'type': str, 'index': True, 'backfill': None},
                {'name': 'state_fips', 'type': str, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(StateFipsMap, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
 
@@ -391,9 +377,7 @@ class TruckCapacity(Data):
                {'name': 'unit_numerator', 'type': str, 'index': True, 'backfill': None},
                {'name': 'unit_denominator', 'type': str, 'index': True, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(TruckCapacity, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
 
@@ -405,9 +389,7 @@ class AVFT(Data):
                {'name': 'engTechID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'fuelEngFraction', 'type': float, 'index': False, 'backfill': None})
 
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
+    def __init__(self, df=None, fpath=None, columns=None, backfill=True):
         super(AVFT, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: any missing values generates error (filling in with zeros or NaNs may break MOVES)

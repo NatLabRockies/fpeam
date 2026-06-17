@@ -87,20 +87,57 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         if params is None:
             self._params = _load_default_params()
         elif isinstance(params, str):
-            self._params = pd.read_csv(params)
+            self._params = pd.read_csv(params, comment='#')
         else:
             self._params = pd.DataFrame(params)
 
         self._params = self._params.set_index('resource_subtype')
 
+        # Validate that no base_rate would exceed 1.0 even under extreme modifier
+        # combinations.  The maximum theoretical combined modifier is:
+        #   f_T_max ≈ 2.0  (logistic limit as T → ∞)
+        #   f_wind_max = sqrt(3/2) ≈ 1.22  (capped at 3 m/s)
+        #   f_precip_max = 1.0  (0 mm precipitation)
+        #   f_soil_max = 1.15  (clay soil, Bouwman 2002 Table 2)
+        # Combined maximum ≈ 2.0 × 1.22 × 1.0 × 1.15 ≈ 2.81
+        _MAX_COMBINED_MODIFIER = 2.81
+        _high_rates = self._params[
+            self._params['base_rate_nh3'] * _MAX_COMBINED_MODIFIER > 1.0
+        ]
+        if not _high_rates.empty:
+            LOGGER.warning(
+                'AmmoniaFertilizerProvider: the following fertilizer subtypes have '
+                'base_rate_nh3 values that could exceed 1.0 NH3-fraction under '
+                'extreme climate conditions (high T, high wind, dry, clay soil). '
+                'The result will be clipped to 1.0 (physical mass-balance bound), '
+                'but consider revising the base rates: %s',
+                _high_rates['base_rate_nh3'].to_dict()
+            )
+
     # ── climate modifier functions ────────────────────────────────────────
 
     @staticmethod
     def _f_temperature(t_c: pd.Series) -> pd.Series:
-        """Temperature modifier: logistic increase, saturates at ~30°C.
+        """Temperature modifier: logistic increase, reference-normalised.
 
-        f_T = 1 / (1 + exp(-0.15 * (T - 15)))   [reference at 15°C → 0.5]
-        Normalised so f_T(15°C) = 1.0.
+        Uses the Bouwman 2002 logistic parameterisation::
+
+            f_T_raw(T) = 1 / (1 + exp(-0.15 * (T - 15)))
+
+        Normalised so f_T(15°C) = 1.0::
+
+            ref = f_T_raw(15) = 0.5
+            f_T(T) = f_T_raw(T) / ref
+
+        Properties:
+        - f_T(15°C) = 1.0 (reference condition)
+        - f_T(0°C)  ≈ 0.27  (low-temperature suppression)
+        - f_T(30°C) ≈ 1.69  (warm conditions increase volatilisation)
+        - f_T → 2.0 as T → ∞  (theoretical maximum; never reached in practice)
+
+        The modifier can exceed 1.0 at temperatures above the 15°C reference.
+        Combined with the base rate and other modifiers, the result is bounded by
+        the physical mass-balance clip applied in factors().
         """
         ref = 1.0 / (1.0 + np.exp(-0.15 * (15.0 - 15.0)))  # = 0.5
         return (1.0 / (1.0 + np.exp(-0.15 * (t_c - 15.0)))) / ref
@@ -210,7 +247,19 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         ).fillna(0.0)
 
         _relevant = _relevant.copy()
-        _relevant['rate'] = (base_rates * modifier).clip(lower=0.0, upper=1.0)
+        _unclipped = (base_rates * modifier).values
+        _clipped = np.clip(_unclipped, 0.0, 1.0)
+        # Warn if any rate would exceed 1.0 before clipping (physical bound violated)
+        _over_one = _clipped < _unclipped
+        if _over_one.any():
+            LOGGER.warning(
+                'AmmoniaFertilizerProvider: %d rate(s) exceeded 1.0 before '
+                'mass-balance clip. Check base_rate values and climate inputs. '
+                'Subtypes affected: %s',
+                int(_over_one.sum()),
+                _relevant.loc[_over_one, 'resource_subtype'].tolist(),
+            )
+        _relevant['rate'] = _clipped
         _relevant['pollutant'] = 'nh3'
         _relevant['resource'] = 'nitrogen'
         _relevant['activity'] = 'chemical application'
