@@ -1,4 +1,6 @@
 import os
+import platform
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -13,10 +15,137 @@ from ..Data import (RegionFipsMap, TruckCapacity)
 
 LOGGER = utils.logger(name=__name__)
 
+_IS_WINDOWS = platform.system() == 'Windows'
 
-# @TODO keep the movesscenarioID in output table to identify cached results
-# @TODO separate directories for separate scenario names, also tack on
-# scenario name to MOVES input file names
+
+def _build_macos_classpath(moves_home):
+    """Build a Unix classpath string from the MOVES source tree.
+
+    Mirrors the <path id="classpath"> in build.xml but uses ':'
+    as the path separator and forward-slash paths.
+    """
+    sep = ':'
+    entries = [
+        '.',
+        'libs/ant-contrib-1.0b3.jar',
+        'libs/commons-io-2.11.0.jar',
+        'libs/commons-lang-2.2.jar',
+        'libs/dom.jar',
+        'libs/jai_codec.jar',
+        'libs/jai_core.jar',
+        'libs/jakarta-regexp-1.3.jar',
+        'libs/jaxp-api.jar',
+        'libs/jlfgr-1_0.jar',
+        'libs/jna-jpms-5.15.0.jar',
+        'libs/jna-platform-jpms-5.15.0.jar',
+        'libs/junit-4.5.jar',
+        'libs/mysql-connector-java-5.1.17-bin.jar',
+        'libs/sax.jar',
+        'libs/xercesImpl.jar',
+        'libs/xml-apis.jar',
+        'libs/abbot/abbot.jar',
+        'libs/abbot/costello.jar',
+        'libs/poi/commons-codec-1.5.jar',
+        'libs/poi/commons-logging-1.1.jar',
+        'libs/poi/dom4j-1.6.1.jar',
+        'libs/poi/jsr173_1.0_api.jar',
+        'libs/poi/ooxml-schemas-1.0.jar',
+        'libs/poi/poi-3.9-20121203.jar',
+        'libs/poi/poi-ooxml-3.9-20121203.jar',
+        'libs/poi/stax-api-1.0.1.jar',
+        'libs/poi/xmlbeans-2.3.0.jar',
+        'amazon/libs/aws-java-sdk-1.1.4.jar',
+        'amazon/libs/commons-codec-1.3.jar',
+        'amazon/libs/commons-httpclient-3.0.1.jar',
+        'amazon/libs/commons-logging-1.1.1.jar',
+        'amazon/libs/jackson-core-asl-1.4.3.jar',
+        'amazon/libs/mail-1.4.3.jar',
+        'amazon/libs/stax-1.2.0.jar',
+        'amazon/libs/stax-api-1.0.1.jar',
+    ]
+    return sep.join(os.path.join(moves_home, e) for e in entries)
+
+
+def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=3600):
+    """Execute a MOVES command-line invocation cross-platform.
+
+    Parameters
+    ----------
+    flag : str
+        '-i' for import or '-r' for run.
+    mrs_file : str
+        Absolute path to the .mrs file.
+    moves_home : str
+        Path to the MOVES source tree root (macOS/Linux).
+    moves_path : str
+        Path used on Windows (may differ from moves_home).
+    timeout : int
+        Maximum seconds to wait before raising subprocess.TimeoutExpired.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        If the MOVES process exits with a non-zero return code.
+    """
+    if _IS_WINDOWS:
+        # Windows: delegate to the existing batch-file approach via cmd
+        if flag == '-i':
+            cmd = (
+                r'cd {path} & setenv.bat & '
+                r'java -Xmx512M '
+                r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
+                r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+                r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
+                r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
+            ).format(path=moves_path, flag=flag, file=mrs_file)
+        else:
+            cmd = (
+                r'cd {path} & setenv.bat & '
+                r'java -Xmx512M '
+                r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
+                r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+                r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
+                r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
+            ).format(path=moves_path, flag=flag, file=mrs_file)
+        ret = os.system(cmd)
+        if ret != 0:
+            raise subprocess.CalledProcessError(ret, cmd)
+    else:
+        # macOS / Linux: use subprocess with the build.xml classpath
+        cp = _build_macos_classpath(moves_home)
+
+        # Set up environment: ensure JAVA_HOME and Homebrew PATH are present
+        env = os.environ.copy()
+        homebrew_prefix = subprocess.check_output(
+            ['brew', '--prefix'], text=True
+        ).strip() if not env.get('HOMEBREW_PREFIX') else env['HOMEBREW_PREFIX']
+        java_home = env.get(
+            'JAVA_HOME',
+            os.path.join(homebrew_prefix,
+                         'opt/openjdk@17/libexec/openjdk.jdk/Contents/Home')
+        )
+        env['JAVA_HOME'] = java_home
+        env['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + \
+                      os.path.join(homebrew_prefix, 'bin') + os.pathsep + \
+                      os.path.join(homebrew_prefix, 'sbin') + os.pathsep + \
+                      env.get('PATH', '')
+
+        java_exe = os.path.join(java_home, 'bin', 'java')
+
+        LOGGER.info('MOVES command: %s %s %s (cwd=%s)', java_exe, flag, mrs_file, moves_home)
+        result = subprocess.run(
+            [java_exe, '-Xmx512M', '-cp', cp,
+             'gov.epa.otaq.moves.master.commandline.MOVESCommandLine',
+             flag, mrs_file],
+            cwd=moves_home,
+            env=env,
+            capture_output=False,
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode,
+                                                f'java MOVESCommandLine {flag} {mrs_file}')
+
 
 
 class MOVES(Module):
@@ -83,6 +212,9 @@ class MOVES(Module):
 
         # input and output file directories - get paths from config
         self.moves_path = self.config.get('moves_path')
+        # macOS/Linux: root of MOVES source build tree (used instead of moves_path)
+        _moves_home_cfg = (self.config.get('moves_home') or '').strip()
+        self.moves_home = os.path.expanduser(_moves_home_cfg) if _moves_home_cfg else self.moves_path
         self.moves_datafiles_path = self.config.get('moves_datafiles_path')
 
         # file-specific input directories - combine paths from config with
@@ -2223,17 +2355,16 @@ class MOVES(Module):
                 LOGGER.info('importing MOVES files for FIPS: %s' % _fips)
                 LOGGER.debug('import file: %s' % self.xmlimport_filename)
 
-                # import data and log output
-                command = (
-                    r'cd {moves_path} & setenv.bat & '
-                    r'java -Xmx512M '
-                    r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
-                    r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
-                    r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
-                    r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine'
-                    r' -i {import_file}'
-                ).format(moves_path=self.moves_path, import_file=self.xmlimport_filename)
-                os.system(command)  # @TODO: need to capture output, catch errors
+                try:
+                    _run_moves_command(
+                        flag='-i',
+                        mrs_file=self.xmlimport_filename,
+                        moves_home=self.moves_home,
+                        moves_path=self.moves_path,
+                    )
+                except subprocess.CalledProcessError as e:
+                    LOGGER.error('MOVES import failed for FIPS %s: %s', _fips, e)
+                    raise
 
                 # fix I/M Program flag
                 im_sql_del = """DELETE FROM {db_in}.auditlog
@@ -2257,17 +2388,16 @@ class MOVES(Module):
                 LOGGER.info('running MOVES for FIPS: %s' % _fips)
                 LOGGER.debug('runspec file: %s' % self.runspec_filename)
 
-                command = (
-                    r'cd {moves_folder} & setenv.bat & '
-                    r'java -Xmx512M '
-                    r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
-                    r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
-                    r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
-                    r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine '
-                    r'-r {run_moves}'
-                ).format(moves_folder=self.moves_path, run_moves=self.runspec_filename)
-
-                os.system(command)  # @TODO: need to capture output, catch errors
+                try:
+                    _run_moves_command(
+                        flag='-r',
+                        mrs_file=self.runspec_filename,
+                        moves_home=self.moves_home,
+                        moves_path=self.moves_path,
+                    )
+                except subprocess.CalledProcessError as e:
+                    LOGGER.error('MOVES run failed for FIPS %s: %s', _fips, e)
+                    raise
 
         # postprocess output
         _results = None
