@@ -248,11 +248,8 @@ class FPEAM(object):
 
         # rename the feedstock production units columns to avoid confusion
         # with the pollutant units columns in the results
-        _prod.rename(index=str, columns={'unit_numerator':
-                                         'feedstock_unit_numerator',
-                                         'unit_denominator':
-                                         'feedstock_unit_denominator'},
-                     inplace=True)
+        _prod = _prod.rename(columns={'unit_numerator': 'feedstock_unit_numerator',
+                                      'unit_denominator': 'feedstock_unit_denominator'})
 
         _prod_filtered = _prod[_prod_row_filter]
 
