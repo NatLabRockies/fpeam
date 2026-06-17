@@ -33,7 +33,8 @@ year = integer(default='2017')
 moves_db_host = string(default='localhost')
 moves_db_port = integer(default=3306)
 moves_db_user = string(default='root')
-moves_db_pass = string(default='root')
+# Password has no default; supply via config file or FPEAM_MOVES_DB_PASS env var
+moves_db_pass = string()
 moves_database = string(default='movesdb2220802')
 moves_output_db = string(default='moves_output_db')
 

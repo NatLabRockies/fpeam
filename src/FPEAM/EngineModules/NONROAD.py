@@ -5,7 +5,7 @@ from subprocess import Popen
 import numpy as np
 import pandas as pd
 import pymysql
-from pkg_resources import resource_filename
+from importlib.resources import files as _pkg_files
 
 from FPEAM import utils
 from .Module import Module
@@ -88,7 +88,7 @@ class NONROAD(Module):
 
         # mapping from 2-digit state FIPS to two-character state name
         # abbreviations
-        _fpath = resource_filename('FPEAM', '%s/inputs/state_fips_map.csv' % DATA_FOLDER)
+        _fpath = str(_pkg_files('FPEAM').joinpath('%s/inputs/state_fips_map.csv' % DATA_FOLDER))
         self.state_fips_map = StateFipsMap(fpath=_fpath, backfill=backfill)
 
         # scenario year

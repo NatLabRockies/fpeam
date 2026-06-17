@@ -1,7 +1,7 @@
 """Input and output helper utilities."""
 
 import os
-from pkg_resources import resource_filename
+import importlib.resources
 
 import pandas as pd
 
@@ -11,6 +11,13 @@ CONFIG_FOLDER = 'configs'
 DATA_FOLDER = 'data'
 
 LOGGER = utils.logger(name=__name__)
+
+_FPEAM_PKG = importlib.resources.files('FPEAM')
+
+
+def _resource_path(relpath):
+    """Return absolute filesystem path to a bundled FPEAM resource."""
+    return str(_FPEAM_PKG.joinpath(relpath))
 
 
 def load_configs(*fpath):
@@ -29,7 +36,7 @@ def load_configs(*fpath):
 
     # add local config if available
     try:
-        _local_fpath = resource_filename('FPEAM', '%s/local.ini' % CONFIG_FOLDER)
+        _local_fpath = _resource_path('%s/local.ini' % CONFIG_FOLDER)
     except KeyError:
         pass
     else:
