@@ -115,6 +115,14 @@ class EmissionFactors(Module):
             else:
                 self._provider = _provider_cls(params=_params_path if _params_path else None)
                 LOGGER.info('EmissionFactors using dynamic provider: %s', _provider_name)
+                raise NotImplementedError(
+                    'Dynamic provider "%s" is configured but the provider → '
+                    'get_emissions() wiring is not yet complete.  '
+                    'The geophysical context must be joined onto the '
+                    'production×equipment records before passing to '
+                    'provider.factors().  Remove this error when that wiring '
+                    'is implemented.' % _provider_name
+                )
 
     def get_emissions(self):
         """
@@ -157,18 +165,11 @@ class EmissionFactors(Module):
             )
             _df_regional = _df_regional.drop(columns=['region'])
 
-            # apply national factors only to rows not covered by regional factors
-            _covered = _df_regional[['feedstock', 'tillage_type', 'equipment_group',
-                                     'region_production', 'region_destination',
-                                     'feedstock_amount']].drop_duplicates()
-            _base_national = _base.merge(
-                _covered,
-                on=['feedstock', 'tillage_type', 'equipment_group',
-                    'region_production', 'region_destination', 'feedstock_amount'],
-                how='left',
-                indicator=True,
-            )
-            _base_national = _base_national[_base_national['_merge'] == 'left_only'].drop(columns=['_merge'])
+            # apply national factors only to production regions NOT covered by
+            # a regional override.  Use the set of matched region_production
+            # values rather than a float-equality merge on feedstock_amount.
+            _covered_regions = set(_df_regional['region_production'].unique())
+            _base_national = _base[~_base['region_production'].isin(_covered_regions)]
 
             _df_national = _base_national.merge(_national_factors, on=['feedstock', 'resource'])
 

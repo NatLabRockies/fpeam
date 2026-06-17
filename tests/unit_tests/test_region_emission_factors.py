@@ -159,3 +159,33 @@ class TestRegionKeyedFactors:
         rows_a = ef.results[ef.results['region_production'] == 'REGION_A']
         # With one feedstock measure row and one resource/subtype there should be exactly one result row
         assert len(rows_a) == 1
+
+
+class TestDynamicProviderNotYetWired:
+
+    def test_ammonia_fertilizer_provider_config_raises_not_implemented(self, ef_config):
+        """Configuring provider=ammonia_fertilizer must raise NotImplementedError
+        until the geophysical context → get_emissions() wiring is complete."""
+        import tempfile, os
+        from configobj import ConfigObj
+        cfg = ConfigObj(ef_config)
+        cfg['provider'] = 'ammonia_fertilizer'
+
+        equip = _equipment()
+        prod = _production_two_regions()
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(_NATIONAL_FACTORS_CSV)
+            ef_path = f.name
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(_DISTRIBUTION_CSV)
+            rd_path = f.name
+        cfg['emission_factors'] = ef_path
+        cfg['resource_distribution'] = rd_path
+
+        try:
+            with pytest.raises(NotImplementedError):
+                EmissionFactors(config=cfg, equipment=equip, production=prod)
+        finally:
+            os.unlink(ef_path)
+            os.unlink(rd_path)
