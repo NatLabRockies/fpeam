@@ -103,9 +103,7 @@ Untitled*.ipynb
 /tests/unit_tests/__init__.py
 /tests/unit_tests/test_copilot_tool_policy.py
 
-# Pixi environment / lockfile (toolkit-scaffolded, not part of the FPEAM project)
-/pixi.toml
-/pixi.lock
+# Pixi environment cache (local-only)
 /.pixi/
 
 # Agent workflow scaffolding (toolkit-managed, kept out of repo)

@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+    branches: [dev, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.43.3
+          cache: true
+
+      - name: Run tests
+        run: pixi run env PYTHONPATH=src python -m pytest tests/ -v
