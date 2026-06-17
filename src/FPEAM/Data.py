@@ -17,22 +17,26 @@ class Data(pd.DataFrame):
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
 
-        _df = pd.DataFrame({}) if df is None and fpath is None else load(fpath=fpath,
-                                                                         columns=columns)
+        if df is not None:
+            _df = pd.DataFrame(df)
+        elif fpath is not None:
+            _df = load(fpath=fpath, columns=columns)
+        else:
+            _df = pd.DataFrame({})
 
         super(Data, self).__init__(data=_df)
 
         self.source = fpath or 'DataFrame'
 
-        _valid = self.validate()
-
-        try:
-            assert _valid is True
-        except AssertionError:
-            if df is not None or fpath is not None:
-                raise RuntimeError('{} failed validation'.format(__name__, ))
-            else:
-                pass
+        # Only enforce validation when the caller supplied data; empty
+        # default construction is allowed for subclassing/composition.
+        if df is not None or fpath is not None:
+            if not self.validate():
+                raise RuntimeError(
+                    '{cls} failed validation (source={src})'.format(
+                        cls=type(self).__name__, src=self.source,
+                    )
+                )
 
         if backfill:
             for _column in self.COLUMNS:
@@ -347,12 +351,12 @@ class RegionFipsMap(Data):
             assert self.region.nunique() == self.fips.nunique()
         except AssertionError:
             _region_counts = self.region.value_counts()
-            _dup_regions = list(_region_counts.loc[_region_counts != 1].values)
+            _dup_regions = list(_region_counts.loc[_region_counts != 1].index)
             if _dup_regions:
                 LOGGER.error('Duplicated region values in region_fips_map data: %s' % _dup_regions)
 
             _fips_counts = self.fips.value_counts()
-            _dup_fips = list(_fips_counts.loc[_region_counts != 1].values)
+            _dup_fips = list(_fips_counts.loc[_fips_counts != 1].index)
             if _dup_fips:
                 LOGGER.error('Duplicated FIPS values in region_fips_map data: %s' % _dup_fips)
             raise ValueError('region_fips_map data must have only 1 '
