@@ -21,7 +21,7 @@ LOGGER = utils.logger(name=__name__)
 class FPEAM(object):
     """Base class to hold shared information"""
 
-    __version__ = '2.4.0'
+    __version__ = '2.5.0'
 
     MODULES = {'emissionfactors': EngineModules.EmissionFactors,
                'fugitivedust': EngineModules.FugitiveDust,
