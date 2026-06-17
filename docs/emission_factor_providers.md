@@ -78,15 +78,26 @@ NH3_fraction = base_rate(subtype)
 | `f_precip` | precipitation_mm | Exponential decay; dry=max, wet=reduced |
 | `f_soil` | soil_type (USDA texture) | Lookup table; clay > loam > sand |
 
-**Base rates** (bundled defaults from Bouwman 2002):
+**Base rates** (bundled defaults from Bouwman 2002, Table 3 median values):
 
-| Fertilizer subtype | Base rate (lb NH3 / lb N) |
-|---|---|
-| Anhydrous ammonia | 0.040 |
-| Ammonium nitrate | 0.008 |
-| Ammonium sulfate | 0.088 |
-| Urea | 0.025 |
-| Nitrogen solutions | 0.028 |
+| Fertilizer subtype | Base rate (lb NH3-N / lb N) | Notes |
+|---|---|---|
+| Anhydrous ammonia | 0.040 | See caveat below |
+| Ammonium nitrate | 0.008 | |
+| Ammonium sulfate | 0.088 | |
+| Urea | 0.025 | |
+| Nitrogen solutions | 0.028 | |
+
+**Important caveat — anhydrous ammonia application method**
+
+The Bouwman 2002 base rate of 0.040 applies to **surface-incorporated** anhydrous ammonia.
+Anhydrous ammonia is often injected below the soil surface (deep injection), which results
+in near-zero atmospheric NH3 volatilisation because the gas reacts immediately with soil
+moisture and is retained.  If your equipment dataset represents injected anhydrous ammonia,
+the correct rate is approximately 0.003–0.010 lb NH3-N / lb N.
+
+To model this distinction: supply a custom `provider_params` CSV that overrides the
+`anhydrous ammonia` base rate to reflect your application method.
 
 **Configuration**
 

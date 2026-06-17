@@ -193,15 +193,17 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def factors(self, records: pd.DataFrame) -> pd.DataFrame:
         """Return dynamic NH3 rates for each (region, resource_subtype) combination.
 
-        Only rows where ``resource == 'nitrogen'`` and ``resource_subtype`` is one
-        of the recognised fertilizer subtypes produce output rows.  For subtypes not
-        handled by this provider no rows are returned (fall through to TableProvider
-        or other providers in the chain).
+        Only rows where ``resource_subtype`` is one of the recognised nitrogen
+        fertilizer subtypes produce output rows.  When ``resource`` is present in
+        the input, rows where ``resource != 'nitrogen'`` are also excluded.  For
+        subtypes not handled by this provider no rows are returned (fall through to
+        TableProvider or other providers in the chain).
 
         Parameters
         ----------
         records : pd.DataFrame
             Must contain at minimum ``region`` and ``resource_subtype``.
+            When present, ``resource`` is used to restrict to nitrogen applications.
             Optional context: ``temperature_c``, ``wind_speed_m_s``,
             ``precipitation_mm``, ``soil_type``.
 
@@ -210,10 +212,23 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         pd.DataFrame
             One row per (region, resource_subtype, pollutant) combination with
             ``pollutant == 'nh3'``.
+
+        Application type caveat
+        -----------------------
+        The Bouwman 2002 base rates assume surface-incorporated fertilizer
+        application.  Anhydrous ammonia is often injected below the soil surface,
+        which produces near-zero atmospheric volatilisation.  If your equipment
+        data mixes injected and surface-applied anhydrous ammonia, the rate for
+        injected application should be set separately in the parameters CSV.
         """
-        _relevant = records[
-            records.get('resource_subtype', pd.Series(dtype=str)).isin(self.FERTILIZER_SUBTYPES)
-        ].copy() if 'resource_subtype' in records.columns else pd.DataFrame()
+        _mask = pd.Series(False, index=records.index)
+        if 'resource_subtype' in records.columns:
+            _mask = records['resource_subtype'].isin(self.FERTILIZER_SUBTYPES)
+            # Further restrict to nitrogen resource when the column is available
+            if 'resource' in records.columns:
+                _mask = _mask & (records['resource'].str.lower() == 'nitrogen')
+
+        _relevant = records[_mask].copy() if _mask.any() else pd.DataFrame()
 
         if _relevant.empty:
             # Return empty frame with the correct columns
