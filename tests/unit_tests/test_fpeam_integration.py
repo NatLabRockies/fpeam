@@ -78,30 +78,29 @@ class TestFPEAMCollect:
         assert (fpeam.results['pollutant_amount'] >= 0).all()
 
     def test_collect_loss_factor_measures_present(self, fpeam_run_config):
-        """collect() adds 'at biorefinery' feedstock-measure rows via the global loss factors.
-
-        NOTE: 'at farm gate' is currently absent because the bundled
-        feedstock_loss_factors.csv uses supply_chain_stage values of
-        'farm gate' and 'biorefinery gate', while FPEAM.collect() filters
-        for 'harvest', 'field treatment', 'field drying', 'on farm transport'.
-        The stage-name mismatch means the farmgate loss factor subset is always
-        empty for the bundled default data (documented; not a regression).
-        """
+        """collect() adds both 'at farm gate' and 'at biorefinery' feedstock-measure rows."""
         config, project = fpeam_run_config
         with FPEAM(run_config=config) as fpeam:
             fpeam.run()
         measures = set(fpeam.results['feedstock_measure'].unique())
         assert 'at biorefinery' in measures, 'expected at-biorefinery loss-factor rows'
-        # Document the known data/code mismatch without making it an error yet
-        if 'at farm gate' not in measures:
-            import warnings
-            warnings.warn(
-                "KNOWN: 'at farm gate' rows absent — bundled feedstock_loss_factors.csv "
-                "uses 'farm gate' but collect() filters for 'harvest'/'field treatment'/etc. "
-                "Track as p2-error-messages or similar for a future fix.",
-                UserWarning,
-                stacklevel=2,
-            )
+        assert 'at farm gate' in measures, \
+            ('at farm gate rows absent — the supply-chain-stage filter in '
+             'collect() must include "farm gate" to match the bundled data')
+
+    def test_collect_does_not_mutate_production(self, fpeam_run_config):
+        """collect() must not alter self.production (e.g. delete columns)."""
+        import pandas as pd
+        config, project = fpeam_run_config
+        with FPEAM(run_config=config) as fpeam:
+            cols_before = set(fpeam.production.columns)
+            fpeam.run()
+            cols_after = set(fpeam.production.columns)
+        # region_destination should survive; it was being deleted by collect()
+        assert 'region_destination' in cols_after, \
+            'collect() mutated self.production and deleted region_destination'
+        assert cols_before == cols_after, \
+            f'collect() changed production columns: {cols_before.symmetric_difference(cols_after)}'
 
     def test_collect_harvested_rows_present(self, fpeam_run_config):
         """collect() retains the raw 'harvested' measure rows."""

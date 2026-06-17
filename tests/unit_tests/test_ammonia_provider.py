@@ -154,3 +154,30 @@ class TestAmmoniaProviderMissingContext:
         result = provider.factors(records)
         assert len(result) == 1
         assert 0 <= result['rate'].iloc[0] <= 1
+
+
+class TestAmmoniaProviderNegativeWind:
+
+    def test_negative_wind_clamped_to_zero(self):
+        """Negative wind speed is physically invalid; must not produce NaN."""
+        provider = AmmoniaFertilizerProvider()
+        records = pd.DataFrame([{
+            'region': '17031', 'resource': 'nitrogen',
+            'resource_subtype': 'urea',
+            'wind_speed_m_s': -1.0,  # physically impossible
+            'temperature_c': 15.0, 'precipitation_mm': 0.0, 'soil_type': 'loam',
+        }])
+        result = provider.factors(records)
+        assert len(result) == 1
+        assert not result['rate'].isna().any(), 'negative wind produced NaN rate'
+        # Clamped to 0 m/s; f_wind(0) = 0 so rate should be 0
+        assert result['rate'].iloc[0] == 0.0
+
+
+class TestAmmoniaProviderDefaultParams:
+
+    def test_params_csv_loads_without_error(self):
+        """The bundled ammonia_provider_params.csv with comment lines must parse cleanly."""
+        provider = AmmoniaFertilizerProvider()
+        assert set(provider._params.index) == AmmoniaFertilizerProvider.FERTILIZER_SUBTYPES
+        assert 'base_rate_nh3' in provider._params.columns

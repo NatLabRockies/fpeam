@@ -60,7 +60,7 @@ _DEFAULT_PARAMS = 'data/inputs/ammonia_provider_params.csv'
 def _load_default_params():
     pkg = importlib.resources.files('FPEAM')
     path = str(pkg.joinpath(_DEFAULT_PARAMS))
-    return pd.read_csv(path)
+    return pd.read_csv(path, comment='#')
 
 
 class AmmoniaFertilizerProvider(EmissionFactorProvider):
@@ -109,11 +109,15 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def _f_wind(w_m_s: pd.Series) -> pd.Series:
         """Wind speed modifier: square-root increase, capped at 3.0 m/s.
 
-        f_W = min(sqrt(W / 2.0), sqrt(3.0 / 2.0)) / sqrt(2.0 / 2.0)
+        f_W = min(sqrt(max(W, 0) / 2.0), sqrt(3.0 / 2.0)) / sqrt(2.0 / 2.0)
         Normalised so f_W(2.0 m/s) = 1.0.
+
+        Negative wind speeds are physically impossible; they are clamped to 0
+        rather than propagating NaN.
         """
         ref = np.sqrt(2.0 / 2.0)  # = 1.0
-        return np.minimum(np.sqrt(w_m_s / 2.0), np.sqrt(3.0 / 2.0)) / ref
+        w_safe = w_m_s.clip(lower=0.0)
+        return np.minimum(np.sqrt(w_safe / 2.0), np.sqrt(3.0 / 2.0)) / ref
 
     @staticmethod
     def _f_precipitation(p_mm: pd.Series) -> pd.Series:
@@ -178,11 +182,22 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
             # Return empty frame with the correct columns
             return pd.DataFrame(columns=list(self.RATE_COLUMNS))
 
-        # Apply climate modifiers (default to neutral 1.0 if context not provided)
+        # Apply climate modifiers (default to neutral conditions when context is absent).
+        # Default reference conditions match the Bouwman 2002 parameterisation:
+        # T=15°C, wind=2 m/s, precip=0 mm (maximum volatilisation scenario),
+        # loam soil.  Users providing a geophysical_context CSV override these defaults.
+        # NOTE: precip=0 (dry) produces the MAXIMUM rate; this is conservative
+        # (over-estimates volatilisation when actual precipitation is unknown).
         t = _relevant.get('temperature_c', pd.Series(15.0, index=_relevant.index))
         w = _relevant.get('wind_speed_m_s', pd.Series(2.0, index=_relevant.index))
         p = _relevant.get('precipitation_mm', pd.Series(0.0, index=_relevant.index))
         s = _relevant.get('soil_type', pd.Series('loam', index=_relevant.index))
+
+        if 'precipitation_mm' not in _relevant.columns:
+            LOGGER.debug(
+                'AmmoniaFertilizerProvider: precipitation_mm not in records; '
+                'using 0 mm (maximum volatilisation / conservative estimate).'
+            )
 
         modifier = (self._f_temperature(t)
                     * self._f_wind(w)

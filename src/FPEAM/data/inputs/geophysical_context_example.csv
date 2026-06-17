@@ -1,0 +1,24 @@
+# Example geophysical context file for use with the AmmoniaFertilizerProvider.
+# One row per region (county FIPS) and optionally per year/month.
+# The 'region' column must match region_production values in the production dataset.
+#
+# Column definitions:
+#   region          - County FIPS or other region key (str)
+#   year            - Scenario year (int, optional)
+#   month           - Month 1-12 (int, optional; omit for annual averages)
+#   temperature_c   - Mean application-period air temperature in °C (float)
+#   wind_speed_m_s  - Mean wind speed at 2 m height in m/s (float)
+#   precipitation_mm - Total precipitation over the 5 days post-application in mm (float)
+#   soil_type       - USDA texture class (str); see AmmoniaFertilizerProvider._f_soil
+#                     for valid values (sand, loamy sand, sandy loam, loam, silt loam,
+#                     silt, sandy clay loam, clay loam, silty clay loam, sandy clay,
+#                     silty clay, clay).
+#
+# Rows with unknown regions are ignored.
+# Missing optional columns default to reference conditions (T=15°C, wind=2 m/s,
+# precip=0 mm, loam) — see AmmoniaFertilizerProvider docs.
+region,year,temperature_c,wind_speed_m_s,precipitation_mm,soil_type
+17031,2017,22.5,3.2,45.0,silty clay loam
+17043,2017,19.1,2.8,30.0,loam
+17097,2017,21.0,3.5,20.0,silt loam
+26161,2017,17.3,4.1,55.0,loamy sand
