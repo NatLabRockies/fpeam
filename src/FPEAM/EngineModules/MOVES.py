@@ -1925,10 +1925,11 @@ class MOVES(Module):
                     _vmt_by_county_all_routes = _vmt_by_county
 
                 else:
-                    _vmt_by_county_all_routes = \
-                        _vmt_by_county_all_routes.append(_vmt_by_county,
-                                                         ignore_index=True,
-                                                         sort=True)
+                    _vmt_by_county_all_routes = pd.concat(
+                        [_vmt_by_county_all_routes, _vmt_by_county],
+                        ignore_index=True,
+                        sort=True,
+                    )
 
             # after the loop through all routes is complete, merge the data
             # frame containing all routes with _run_emissions
