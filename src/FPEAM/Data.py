@@ -200,6 +200,14 @@ class EmissionFactor(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # If loading from file, include 'region' when the CSV has that column
+        # so region-keyed factors are carried through unchanged.
+        if fpath is not None and 'region' not in columns:
+            import pandas as _pd
+            _header = _pd.read_csv(fpath, nrows=0).columns.tolist()
+            if 'region' in _header:
+                columns = dict(columns)
+                columns['region'] = str
         super(EmissionFactor, self).__init__(df=df, fpath=fpath, columns=columns,
                                              backfill=backfill)
 
