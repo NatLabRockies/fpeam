@@ -189,3 +189,90 @@ class TestDynamicProviderNotYetWired:
         finally:
             os.unlink(ef_path)
             os.unlink(rd_path)
+
+
+class TestRegionFallbackPerResource:
+    """Regression for the region-only fallback bug.
+
+    A region with a nitrogen override must still receive national herbicide
+    factors.  Using region alone as the 'covered' key broke this.
+    """
+
+    def test_region_override_does_not_suppress_other_resources(self, ef_config):
+        """REGION_A gets nitrogen override AND national herbicide.
+        REGION_B (no override) gets national nitrogen AND national herbicide."""
+        import tempfile, os
+
+        factors_csv = (
+            'resource,resource_subtype,activity,pollutant,rate,unit_numerator,unit_denominator,region\n'
+            'nitrogen,anhydrous ammonia,chemical application,nh3,0.04,pound,pound,\n'
+            'nitrogen,anhydrous ammonia,chemical application,nh3,0.10,pound,pound,REGION_A\n'
+            'herbicide,generic herbicide,chemical application,voc,0.75,pound,pound,\n'
+        )
+        dist_csv = (
+            'feedstock,resource,resource_subtype,distribution\n'
+            'corn grain,nitrogen,anhydrous ammonia,1.0\n'
+            'corn grain,herbicide,generic herbicide,1.0\n'
+        )
+
+        equip_df = pd.DataFrame([
+            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
+             'equipment_group': 'grp1', 'rotation_year': 1,
+             'activity': 'chemical application', 'equipment_name': 'tractor',
+             'equipment_horsepower': 100.0, 'resource': 'nitrogen', 'rate': 1.0,
+             'unit_numerator': 'lb', 'unit_denominator': 'ac'},
+            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
+             'equipment_group': 'grp1', 'rotation_year': 1,
+             'activity': 'chemical application', 'equipment_name': 'sprayer',
+             'equipment_horsepower': 50.0, 'resource': 'herbicide', 'rate': 1.0,
+             'unit_numerator': 'lb', 'unit_denominator': 'ac'},
+        ])
+        prod_df = pd.DataFrame([
+            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
+             'region_production': 'REGION_A', 'region_destination': 'REGION_A',
+             'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
+             'feedstock_amount': 100.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
+             'source_lon': -87.6, 'source_lat': 41.8,
+             'destination_lon': -87.6, 'destination_lat': 41.8},
+            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
+             'region_production': 'REGION_B', 'region_destination': 'REGION_B',
+             'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
+             'feedstock_amount': 200.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
+             'source_lon': -95.0, 'source_lat': 40.0,
+             'destination_lon': -95.0, 'destination_lat': 40.0},
+        ])
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(factors_csv); ef_path = f.name
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(dist_csv); rd_path = f.name
+
+        from configobj import ConfigObj
+        cfg = ConfigObj(ef_config)
+        cfg['emission_factors'] = ef_path
+        cfg['resource_distribution'] = rd_path
+
+        from FPEAM.Data import Equipment, Production
+        equip = Equipment(df=equip_df, backfill=False)
+        prod = Production(df=prod_df, backfill=False)
+
+        try:
+            ef = EmissionFactors(config=cfg, equipment=equip, production=prod)
+            ef.run()
+        finally:
+            os.unlink(ef_path); os.unlink(rd_path)
+
+        # REGION_A must have BOTH nitrogen (regional rate=0.10) AND herbicide (national rate=0.75)
+        ra = ef.results[ef.results['region_production'] == 'REGION_A']
+        assert 'nitrogen' in ra['resource'].values, 'REGION_A missing nitrogen results'
+        assert 'herbicide' in ra['resource'].values, \
+            'REGION_A missing herbicide results — region-only fallback bug'
+
+        # REGION_A nitrogen gets the regional rate (0.10, not national 0.04)
+        ra_n = ra[ra['resource'] == 'nitrogen']['pollutant_amount'].sum()
+        assert abs(ra_n - 10.0) < 1e-9, f'Expected REGION_A NH3=10.0, got {ra_n}'
+
+        # REGION_B must have both
+        rb = ef.results[ef.results['region_production'] == 'REGION_B']
+        assert 'nitrogen' in rb['resource'].values
+        assert 'herbicide' in rb['resource'].values

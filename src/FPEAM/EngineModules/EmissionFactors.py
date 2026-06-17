@@ -165,11 +165,23 @@ class EmissionFactors(Module):
             )
             _df_regional = _df_regional.drop(columns=['region'])
 
-            # apply national factors only to production regions NOT covered by
-            # a regional override.  Use the set of matched region_production
-            # values rather than a float-equality merge on feedstock_amount.
-            _covered_regions = set(_df_regional['region_production'].unique())
-            _base_national = _base[~_base['region_production'].isin(_covered_regions)]
+            # apply national factors only to (feedstock, resource, region_production)
+            # combinations NOT covered by a regional override.
+            # IMPORTANT: use a (feedstock, resource, region_production) triplet as
+            # the "covered" key.  Using region alone is wrong — a region that has an
+            # override for nitrogen but not for herbicide would lose its national
+            # herbicide factors if we only checked region membership.
+            _covered_keys = _df_regional[['feedstock', 'resource', 'region_production']]\
+                .drop_duplicates()
+            _base_national = _base.merge(
+                _covered_keys,
+                on=['feedstock', 'resource', 'region_production'],
+                how='left',
+                indicator=True,
+            )
+            _base_national = _base_national[
+                _base_national['_merge'] == 'left_only'
+            ].drop(columns=['_merge'])
 
             _df_national = _base_national.merge(_national_factors, on=['feedstock', 'resource'])
 
