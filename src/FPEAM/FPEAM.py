@@ -189,22 +189,38 @@ class FPEAM(object):
         """
 
         _df_modules = pd.DataFrame()
-        _prod = self.production
+        # Operate on a copy so self.production is not mutated by column deletions
+        # and renames that follow. Without this copy, calling collect() a second
+        # time (or accessing self.production after run()) raises KeyError.
+        _prod = self.production.copy()
 
         # preprocess the feedstock loss factor dataset to obtain factors
-        # that can be used to calculate delivered feedstock amounts
-        _loss_factors = self.feedstock_loss_factors
+        # that can be used to calculate delivered feedstock amounts.
+        # Work on a copy so self.feedstock_loss_factors is not mutated.
+        _loss_factors = self.feedstock_loss_factors.copy()
 
         # turn the loss factors into remaining fraction
-        _loss_factors.eval('dry_matter_remaining = 1 - dry_matter_loss',
-                           inplace=True)
+        _loss_factors = _loss_factors.assign(
+            dry_matter_remaining=1 - _loss_factors['dry_matter_loss']
+        )
 
         # calculate separate data frame including only loss factors associated
-        # with on-farm activities
-        _loss_factors_farmgate = _loss_factors[_loss_factors.supply_chain_stage.isin(['harvest',
-                                                                                      'field treatment',
-                                                                                      'field drying',
-                                                                                      'on farm transport'])]
+        # with on-farm (pre-farm-gate) activities.
+        # The bundled feedstock_loss_factors.csv uses the stage name 'farm gate'
+        # for all on-farm losses (harvest, field drying, on-farm transport combined
+        # into one aggregate row per feedstock). Older stage names like 'harvest',
+        # 'field treatment', 'field drying', 'on farm transport' may appear in
+        # user-supplied files with finer granularity; both conventions are supported.
+        _farmgate_stages = {
+            'farm gate',           # bundled default — single aggregate row
+            'harvest',             # finer granularity alternative
+            'field treatment',
+            'field drying',
+            'on farm transport',
+        }
+        _loss_factors_farmgate = _loss_factors[
+            _loss_factors.supply_chain_stage.isin(_farmgate_stages)
+        ]
 
         # calculate total remaining fraction by feedstock by multiplying
         # the remaining fractions; select numeric columns only to avoid
