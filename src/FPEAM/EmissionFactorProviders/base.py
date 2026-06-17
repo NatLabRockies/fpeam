@@ -11,20 +11,32 @@ class EmissionFactorProvider(abc.ABC):
     resource amounts, and any additional context columns) into a table of
     emission rates.
 
+    Design note — feedstock is NOT in RATE_COLUMNS
+    ------------------------------------------------
+    Providers operate at the *resource* level (nitrogen, herbicide, etc.),
+    not the *feedstock* level.  The feedstock-to-resource relationship is
+    captured by the ResourceDistribution table, which is merged before
+    calling the provider.  This keeps providers reusable across feedstocks
+    that use the same resource subtypes under the same conditions.
+
+    The ``feedstock`` column appears in ``EmissionFactors.overall_factors``
+    because it is added by the ResourceDistribution merge inside
+    ``EmissionFactors.__init__``, not because providers need to return it.
+
     The returned DataFrame must have exactly these columns:
 
-    ============= ======================================================
-    Column        Description
-    ============= ======================================================
-    region        Region key (str or NaN for national default).
-    resource      Resource name (e.g. ``nitrogen``).
-    resource_sub  Resource subtype (e.g. ``anhydrous ammonia``).
-    activity      Activity name (e.g. ``chemical application``).
-    pollutant     Pollutant name (e.g. ``nh3``, ``voc``).
-    rate          Emission rate in lb pollutant / lb resource (float ≥ 0).
-    unit_num      Unit numerator label (always ``pound`` for now).
-    unit_den      Unit denominator label (always ``pound`` for now).
-    ============= ======================================================
+    =================== ======================================================
+    Column              Description
+    =================== ======================================================
+    region              Region key (str or NaN for national default).
+    resource            Resource name (e.g. ``nitrogen``).
+    resource_subtype    Resource subtype (e.g. ``anhydrous ammonia``).
+    activity            Activity name (e.g. ``chemical application``).
+    pollutant           Pollutant name (e.g. ``nh3``, ``voc``).
+    rate                Emission rate: lb pollutant / lb resource (float ≥ 0).
+    unit_numerator      Unit numerator label (always ``pound`` for now).
+    unit_denominator    Unit denominator label (always ``pound`` for now).
+    =================== ======================================================
 
     Providers MAY consume additional columns on *records* (e.g. temperature,
     wind speed, soil type) to compute dynamic rates.  They MUST return one row
