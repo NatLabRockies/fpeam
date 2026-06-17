@@ -1,10 +1,14 @@
 import pytest
+from importlib.resources import files as _pkg_files
 
 from FPEAM.EngineModules import EmissionFactors
 from FPEAM.IO import load_configs, CONFIG_FOLDER, DATA_FOLDER
 from FPEAM import Data
-from pkg_resources import resource_filename
 import pandas
+
+
+def _r(relpath):
+    return str(_pkg_files('FPEAM').joinpath(relpath))
 
 
 @pytest.fixture(scope='module')
@@ -14,9 +18,7 @@ def config():
     :return: [ConfigObj]
     """
 
-    _fpath = resource_filename('FPEAM', '%s/run_config.ini' % CONFIG_FOLDER)
-
-    return load_configs(_fpath)
+    return load_configs(_r('%s/run_config.ini' % CONFIG_FOLDER))
 
 
 @pytest.fixture(scope='module')
@@ -26,10 +28,9 @@ def default_emission_factors_results():
     :return: [DataFrame]
     """
 
-    _fpath = resource_filename('FPEAM', '%s/outputs/default_emission_factors_results.csv' % DATA_FOLDER)
-
-    return pandas.read_csv(_fpath, index_col=False, dtype={'region_production': str,
-                                                           'region_destination': str})
+    return pandas.read_csv(_r('%s/outputs/default_emission_factors_results.csv' % DATA_FOLDER),
+                           index_col=False, dtype={'region_production': str,
+                                                   'region_destination': str})
 
 
 @pytest.fixture(scope='module')
@@ -39,9 +40,7 @@ def equipment():
     :return: [DataFrame]
     """
 
-    _fpath = resource_filename('FPEAM', '%s/equipment/bts16_equipment.csv' % DATA_FOLDER)
-
-    return Data.Equipment(fpath=_fpath)
+    return Data.Equipment(fpath=_r('%s/equipment/bts16_equipment.csv' % DATA_FOLDER))
 
 
 @pytest.fixture(scope='module')
@@ -51,9 +50,7 @@ def production():
     :return: [DataFrame]
     """
 
-    _fpath = resource_filename('FPEAM', '%s/production/production_2015_bc1060.csv' % DATA_FOLDER)
-
-    return Data.Production(fpath=_fpath)
+    return Data.Production(fpath=_r('%s/production/production_2015_bc1060.csv' % DATA_FOLDER))
 
 
 def test_emission_factors_run(config, equipment, production, default_emission_factors_results):

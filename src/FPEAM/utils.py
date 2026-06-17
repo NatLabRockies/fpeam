@@ -84,7 +84,7 @@ def filepath(fpath, max_length=None):
 
     from os.path import exists, abspath, expanduser
     from pathlib import Path
-    from pkg_resources import resource_filename
+    from importlib.resources import files as _pkg_files
 
     # get a full path
     if fpath.startswith('~'):
@@ -104,7 +104,7 @@ def filepath(fpath, max_length=None):
     except AssertionError:
         # convert to resource filename if not regular file
         try:
-            _fpath = resource_filename('FPEAM', _fpath)
+            _fpath = str(_pkg_files('FPEAM').joinpath(_fpath))
         except ValueError:
             raise VdtPathDoesNotExist(value=fpath)
     else:

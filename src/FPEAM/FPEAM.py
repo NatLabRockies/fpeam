@@ -2,17 +2,13 @@ import os
 import shutil
 import sys
 import tempfile
-
-if sys.version_info[1] >= 10:
-    from collections.abc import Iterable
-else:
-    from collections import Iterable
+from collections.abc import Iterable
+from importlib.resources import files as _pkg_files
 
 import geopandas
 import pandas as pd
 from FPEAM import EngineModules
 from joblib import Memory
-from pkg_resources import resource_filename
 from shapely.geometry import MultiPolygon
 
 from . import Data
@@ -97,7 +93,7 @@ class FPEAM(object):
 
         for _module in _modules:
             _config = run_config.get(_module.lower(), None) or \
-                      load_configs(resource_filename('FPEAM', '%s/%s.ini' % (CONFIG_FOLDER, _module.lower()))
+                      load_configs(str(_pkg_files('FPEAM').joinpath('%s/%s.ini' % (CONFIG_FOLDER, _module.lower())))
                                    )[_module.lower()]
             _config['scenario_name'] = _config.get('scenario_name', '').strip() or self.config.get('scenario_name')
 
@@ -133,16 +129,16 @@ class FPEAM(object):
     @config.setter
     def config(self, value):
 
-        _fpeam_spec = resource_filename('FPEAM', '%s/fpeam.spec' % (CONFIG_FOLDER, ))
+        _fpeam_spec = str(_pkg_files('FPEAM').joinpath('%s/fpeam.spec' % (CONFIG_FOLDER, )))
 
         try:
             _fpeam_config = value['fpeam']
         except KeyError:
-            _fpeam_config = resource_filename('FPEAM', '%s/fpeam.ini' % (CONFIG_FOLDER, ))
+            _fpeam_config = str(_pkg_files('FPEAM').joinpath('%s/fpeam.ini' % (CONFIG_FOLDER, )))
 
         _fpeam_config = utils.validate_config(config=_fpeam_config, spec=_fpeam_spec)
 
-        _spec = resource_filename('FPEAM', '%s/run_config.spec' % (CONFIG_FOLDER, ))
+        _spec = str(_pkg_files('FPEAM').joinpath('%s/run_config.spec' % (CONFIG_FOLDER, )))
         _config = utils.validate_config(config=value['run_config'], spec=_spec)
 
         _config['config']['fpeam'] = _fpeam_config['config']
@@ -337,7 +333,7 @@ class FPEAM(object):
                                                                                   'unit_denominator']]
         if self.config['fpeam'].get('inmap_county_export', False) is True:
             # save InMAP county-level output
-            _shp_fpath_in = resource_filename('FPEAM', 'data/inputs/tl_2019_us_county/tl_2019_us_county.shp')
+            _shp_fpath_in = str(_pkg_files('FPEAM').joinpath('data/inputs/tl_2019_us_county/tl_2019_us_county.shp'))
             _df = geopandas.read_file(_shp_fpath_in, dtype={'STATEFP': str, 'COUNTYFP': str, 'geometry': MultiPolygon})[['STATEFP', 'COUNTYFP', 'NAME', 'geometry']]
             _df['region_production'] = _df.STATEFP + _df.COUNTYFP
 
