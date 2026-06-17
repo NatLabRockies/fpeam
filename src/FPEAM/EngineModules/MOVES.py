@@ -1,3 +1,4 @@
+import pdb
 import os
 
 import numpy as np
@@ -162,14 +163,15 @@ class MOVES(Module):
         # 20 is conventional diesel and 21 is biodiesel
         # @NOTE possibly add to GUI as user input in the future
         # can select additional fuel subtypes in list form
-        self.fuel_subtype_id = (10, 11, 12, 13, 14, 15, 18, 20, 21)
+        self.fuel_subtype_id = (10, 11, 12, 13, 14, 15, 18, 20, 21, 22, 30, 40, 50, 51, 52, 90)
 
         # selection of fuel supply type
         # NOT sure what this means
         # @NOTE possibly add to GUI as user input in the future
         # @TODO: add support for list of values: 1, 2, 3, 9
         # set roadtype for example implementation in XML
-        self.fuel_supply_fuel_type_id = '2'
+        self.fuel_supply_fuel_type_id = '1', '2', '3', '9'
+        #self.fuel_supply_fuel_type_id = '2'
 
         # user input - fraction of VMT on each road type (dictionary type)
         self._vmt_fraction = None
@@ -249,10 +251,11 @@ class MOVES(Module):
 
         # dictionary of shorthand pollutant names to applicable MOVES
         # pollutant process numbers
-        # @TODO: update to include all necessary combinations. See MOVES5 validated runspe
         self.prockey = {"NH3": ["1", "2", "15", "16", "17", "90", "91"],
                         "CO2atm": ["1", "2", "90", "91"],
                         "CO2eq": ["1", "2", "90", "91"],
+
+                        #"CO2eq": ["1", "2", "15", "16", "17", "90", "91"],
                         "CO": ["1", "2", "15", "16", "17", "90", "91"],
                         "ECPM": ["1", "2", "90", "91"],
                         "Carbon": ["1", "2", "90", "91"],
@@ -410,7 +413,7 @@ class MOVES(Module):
             KEY (MOVESRunID, hostType, loopableClassName)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        if self.moves_version == 'MOVES3':
+        if self.moves_version.startswith('MOVES3') or self.moves_version.startswith('MOVES5'):
             _create_tables_dict['movesactivityoutput'] = """CREATE TABLE IF NOT EXISTS
                 {moves_output_db}.`movesactivityoutput` (
                 MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -438,7 +441,6 @@ class MOVES(Module):
                 activityMean         FLOAT NULL DEFAULT NULL,
                 activitySigma        FLOAT NULL DEFAULT NULL
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
-        # @TODO: add elif self.moves_version.startswith('MOVES5'):
         else:
             # @TODO: add warning that we're assuming MOVES2014b or remove this altogether
             _create_tables_dict['movesactivityoutput'] = """CREATE TABLE IF NOT EXISTS
@@ -757,8 +759,7 @@ class MOVES(Module):
         for _table in _tables:
             kvals['table'] = _table
 
-            _table_sql = """SELECT * FROM {moves_database}.{table} WHERE
-                     sourceTypeID = {source_type_id};""".format(**kvals)
+            _table_sql = """SELECT * FROM {moves_database}.{table};""".format(**kvals)
 
             # pull data from database and save in a csv
             pd.read_sql(_table_sql, self.conn).to_csv(os.path.join(
@@ -814,7 +815,7 @@ class MOVES(Module):
         kvals['year'] = self.year
         kvals['moves_database'] = self.moves_database
         kvals['fuel_subtype_id'] = ', '.join([str(_) for _ in self.fuel_subtype_id])
-        kvals['fuel_supply_fuel_type_id'] = self.fuel_supply_fuel_type_id
+        kvals['fuel_supply_fuel_type_id'] = ', '.join([str(_) for _ in self.fuel_supply_fuel_type_id])
         kvals['countyID'] = str(int(fips))
         kvals['zoneID'] = str(int(fips)) + '0'
 
@@ -889,8 +890,10 @@ class MOVES(Module):
                             '{countyID}' AND
                             {moves_database}.fuelusagefraction.fuelYearID =
                             '{year}' AND
-                            {moves_database}.fuelusagefraction.fuelSupplyFuelTypeID =
-                            {fuel_supply_fuel_type_id};""".format(**kvals)
+                            {moves_database}.fuelusagefraction.fuelSupplyFuelTypeID IN
+                            ({fuel_supply_fuel_type_id}) AND
+                            {moves_database}.fuelusagefraction.sourceBinFuelTypeID IN
+                            ({fuel_supply_fuel_type_id});""".format(**kvals)
 
         # this name is FIPS dependent, cannot be created in init
         self.fuelusage_filename = os.path.join(self.save_path_countyinputs,
@@ -986,14 +989,14 @@ class MOVES(Module):
 
         # input database
         self.db_in = "fips_{fips}_{year}_{version}_in".format(fips=fips,
-                                                              year=self.year,
+                                                              year=str(self.year),
                                                               version=self.moves_version)
         # scenario ID for MOVES runs
         # ends up in tables in the MOVES output database
         self.scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
-                                                           day=self.day,
+                                                           day=str(self.day),
                                                            month='_'.join([str(_) for _ in self.month]),
-                                                           year=self.year)
+                                                           year=str(self.year))
 
         # Create XML element tree for geographic selection
 
@@ -1033,11 +1036,20 @@ class MOVES(Module):
         # combination short-haul truck
         # @TODO convert all of these to user inputs pulled from config
         # @TODO: add support for multiple fuel types (1, 2, 3, and 9) (should be defined in self.fuel_supply_fuel_type_ids
-        vehicle_selection = etree.Element("onroadvehicleselection",
-                                          fueltypeid=self.fuel_supply_fuel_type_id.__str__())
-        vehicle_selection.set("fueltypedesc", "Diesel Fuel")
-        vehicle_selection.set("sourcetypeid", self.source_type_id.__str__())
-        vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
+
+        fueltypedesc = {'1': 'Gasoline',
+                        '2': 'Diesel Fuel',
+                        '3': 'Compressed Natural Gas (CNG)',
+                        '9': 'Electricity'}
+
+        onroadvehicleselections = etree.Element("onroadvehicleselections")
+        for fuel_type_id in self.fuel_supply_fuel_type_id:
+
+            vehicle_selection = etree.SubElement(onroadvehicleselections,
+                                                 "onroadvehicleselection", fueltypeid=fuel_type_id)
+            vehicle_selection.set("fueltypedesc", fueltypedesc[fuel_type_id])
+            vehicle_selection.set("sourcetypeid", '61')
+            vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
 
         # Create XML element tree for MOVES pollutant processes
         # Currently includes: CO, NH3, PM10, PM2.5, SO2, NOX, VOC,
@@ -1084,102 +1096,209 @@ class MOVES(Module):
         etree.SubElement(std, "filename")
 
         # Create full element tree for MOVES import file
-        importfilestring = (
-            E.moves(
-                    E.importer(
-                            E.filters(
-                                    E.geographicselections(geoselect),
-                                    timespan,
-                                    E.onroadvehicleselections(vehicle_selection),
-                                    E.offroadvehicleselections(""),
-                                    E.offroadvehiclesccs(""),
-                                    roadtypes,
-                                    polproc,
-                            ),
-                            databasesel,
-                            E.agedistribution(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.sourceTypeAgeDistribution(self.agefile))),
-                            E.avgspeeddistribution(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.avgSpeedDistribution(self.speedfile))),
-                            E.fuel(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(
-                                            E.FuelSupply(self.fuelsupfile),
-                                            E.FuelFormulation(self.fuelformfile),
-                                            E.FuelUsageFraction(self.fuelusagefile),
-                                            E.AVFT(self.avftfile),
-                                    )),
-                                    # @TODO: zoneMonthHour is no zonemonthhour and zonemonthhour is now zoneMonthHour
-                            E.zoneMonthHour(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.zonemonthhour(self.metfile))),
-                            # @TODO: remove rampfraction; not in new MOVES5 import file
-                            E.rampfraction(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.roadType(E.filename("")))),
-                            E.roadtypedistribution(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.roadTypeDistribution(self.roadtypefile))),
-                            E.sourcetypepopulation(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.sourceTypeYear(self.sourcetypefile))),
-                            E.starts(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(
-                                            # @TODO: add startsPerDayPerVehicle (empty string)
-                                            E.startsPerDay(E.filename("")),
-                                            E.startsHourFraction(E.filename("")),
-                                            E.startsSourceTypeFraction(E.filename("")),
-                                            E.startsMonthAdjust(E.filename("")),
-                                            # @TODO: add startsAgeAdjustment (empty string)
-                                            # @TODO: rename importStartsOpModeDistribution to startsOpModeDistribution
-                                            E.importStartsOpModeDistribution(E.filename("")),
-                                            E.Starts(E.filename("")),
-                                    )),
-                            E.vehicletypevmt(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(
-                                            E.HPMSVtypeYear(self.HPMSyearfile),
-                                            E.monthVMTFraction(self.monthVMTfile),
-                                            E.dayVMTFraction(self.dayVMTfile),
-                                            E.hourVMTFraction(self.hourVMTfile),
-                                    )),
-                            E.hotelling(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(
-                                            # @TODO: redo section. Needs "hotellingHoursPerDay", "hotellingHourFraction", hotellingAgeFraction", "hotellingMonthAdjust", "hotellingActivityDistribution" (all empty strings)
-                                            E.hotellingActivityDistribution(E.filename("")),
-                                            E.hotellingHours(E.filename("")))),
-                            # @TODO: add <idle> section: description, parts with totalIdleFraction, idelModelYearGrouping, idleMonthAdjust, idleDayAdjust
-                            E.imcoverage(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.IMCoverage(E.filename("")))),
-                            E.onroadretrofit(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    E.parts(E.onRoadRetrofit(E.filename("")))),
-                            E.generic(
-                                    etree.XML('<description><![CDATA[]]></description>',
-                                              _parser),
-                                    # @TODO: anytable changed from "agecategory" to "activitytype"
-                                    E.parts(E.anytable(E.tablename("agecategory"),
-                                                       E.filename("")))),
-                            mode="county")
+        if self.moves_version.startswith('MOVES3'):
+            importfilestring = (
+                E.moves(
+                        E.importer(
+                                E.filters(
+                                        E.geographicselections(geoselect),
+                                        timespan,
+                                        #E.onroadvehicleselections(vehicle_selection),
+                                        onroadvehicleselections,
+                                        E.offroadvehicleselections(""),
+                                        E.offroadvehiclesccs(""),
+                                        roadtypes,
+                                        polproc,
+                                ),
+                                databasesel,
+                                E.agedistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.sourceTypeAgeDistribution(self.agefile))),
+                                E.avgspeeddistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.avgSpeedDistribution(self.speedfile))),
+                                E.fuel(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.FuelSupply(self.fuelsupfile),
+                                                E.FuelFormulation(self.fuelformfile),
+                                                E.FuelUsageFraction(self.fuelusagefile),
+                                                E.AVFT(self.avftfile),
+                                        )),
+                                E.zoneMonthHour(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.zonemonthhour(self.metfile))),
+                                E.rampfraction(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.roadType(E.filename("")))),
+                                E.roadtypedistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.roadTypeDistribution(self.roadtypefile))),
+                                E.sourcetypepopulation(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.sourceTypeYear(self.sourcetypefile))),
+                                E.starts(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.startsPerDay(E.filename("")),
+                                                E.startsHourFraction(E.filename("")),
+                                                E.startsSourceTypeFraction(E.filename("")),
+                                                E.startsMonthAdjust(E.filename("")),
+                                                E.importStartsOpModeDistribution(E.filename("")),
+                                                E.Starts(E.filename("")),
+                                        )),
+                                E.vehicletypevmt(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.HPMSVtypeYear(self.HPMSyearfile),
+                                                E.monthVMTFraction(self.monthVMTfile),
+                                                E.dayVMTFraction(self.dayVMTfile),
+                                                E.hourVMTFraction(self.hourVMTfile),
+                                        )),
+                                E.hotelling(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.hotellingActivityDistribution(E.filename("")),
+                                                E.hotellingHours(E.filename("")))),
+                                E.imcoverage(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.IMCoverage(E.filename("")))),
+                                E.onroadretrofit(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.onRoadRetrofit(E.filename("")))),
+                                E.generic(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.anytable(E.tablename("agecategory"),
+                                                           E.filename("")))),
+                                mode="county")
+                )
             )
-        )
+        elif self.moves_version.startswith('MOVES5'):
+            importfilestring = (
+                E.moves(
+                        E.importer(
+                                E.filters(
+                                        E.geographicselections(geoselect),
+                                        timespan,
+                                        #E.onroadvehicleselections(vehicle_selection),
+                                        onroadvehicleselections,
+                                        E.offroadvehicleselections(""),
+                                        E.offroadvehiclesccs(""),
+                                        roadtypes,
+                                        polproc,
+                                ),
+                                databasesel,
+                                E.agedistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.sourceTypeAgeDistribution(self.agefile))),
+                                E.avgspeeddistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.avgSpeedDistribution(self.speedfile))),
+                                E.fuel(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.FuelSupply(self.fuelsupfile),
+                                                E.FuelFormulation(self.fuelformfile),
+                                                E.FuelUsageFraction(self.fuelusagefile),
+                                                E.AVFT(self.avftfile),
+                                        )),
+                                        # @TODO (fixed): zoneMonthHour is now zonemonthhour and zonemonthhour is now zoneMonthHour
+                                E.zonemonthhour(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.zoneMonthHour(self.metfile))),
+                                # @TODO (fixed): remove rampfraction; not in new MOVES5 import file
+                                # E.rampfraction(
+                                #         etree.XML('<description><![CDATA[]]></description>',
+                                #                   _parser),
+                                #         E.parts(E.roadType(E.filename("")))),
+                                E.roadtypedistribution(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.roadTypeDistribution(self.roadtypefile))),
+                                E.sourcetypepopulation(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.sourceTypeYear(self.sourcetypefile))),
+                                E.starts(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                # @TODO (fixed): add startsPerDayPerVehicle (empty string)
+                                                E.startsPerDayPerVehicle(E.filename("")),
+                                                E.startsPerDay(E.filename("")),
+                                                E.startsHourFraction(E.filename("")),
+                                                #E.startsSourceTypeFraction(E.filename("")),
+                                                E.startsMonthAdjust(E.filename("")),
+                                                E.startsAgeAdjustment(E.filename("")),
+                                                # @TODO (fixed): add startsAgeAdjustment (empty string)
+                                                # @TODO (fixed): rename importStartsOpModeDistribution to startsOpModeDistribution
+                                                E.startsOpModeDistribution(E.filename("")),
+                                                E.Starts(E.filename("")),
+                                        )),
+                                E.vehicletypevmt(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.HPMSVtypeYear(self.HPMSyearfile),
+                                                E.monthVMTFraction(self.monthVMTfile),
+                                                E.dayVMTFraction(self.dayVMTfile),
+                                                E.hourVMTFraction(self.hourVMTfile),
+                                        )),
+                                E.hotelling(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                # @TODO (fixed): redo section. Needs "hotellingHoursPerDay", "hotellingHourFraction", hotellingAgeFraction", "hotellingMonthAdjust", "hotellingActivityDistribution" (all empty strings)
+                                                E.hotellingHoursPerDay(E.filename("")),
+                                                E.hotellingHourFraction(E.filename("")),
+                                                E.hotellingAgeFraction(E.filename("")),
+                                                E.hotellingMonthAdjust(E.filename("")),
+                                                E.hotellingActivityDistribution(E.filename("")),
+                                        )),
+                                # @TODO (fixed): add <idle> section: description, parts with totalIdleFraction, idelModelYearGrouping, idleMonthAdjust, idleDayAdjust
+                                E.idle(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(
+                                                E.totalIdleFraction(E.filename("")),
+                                                E.idleModelYearGrouping(E.filename("")),
+                                                E.idleMonthAdjust(E.filename("")),
+                                                E.idleDayAdjust(E.filename("")),
+                                        )),
+                                E.imcoverage(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.IMCoverage(E.filename("")))),
+                                E.onroadretrofit(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        E.parts(E.onRoadRetrofit(E.filename("")))),
+                                E.generic(
+                                        etree.XML('<description><![CDATA[]]></description>',
+                                                  _parser),
+                                        # @TODO (fixed): anytable changed from "agecategory" to "activitytype"
+                                        E.parts(E.anytable(E.tablename("activitytype"),
+                                                           E.filename("")))),
+                                mode="county")
+                )
+            )
 
         # Transform element tree to string and save to file
 
@@ -1213,9 +1332,9 @@ class MOVES(Module):
 
         # scenario ID for MOVES runs
         _scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
-                                                       day=self.day,
+                                                       day=str(self.day),
                                                        month='_'.join([str(_) for _ in self.month]),
-                                                       year=self.year)
+                                                       year=str(self.year))
 
         # Create XML element tree for elements with MOVES inputs with CDATA
         description = etree.XML('<description><![CDATA[]]></description>', _parser)
@@ -1233,9 +1352,9 @@ class MOVES(Module):
         # which specifies which outputs are included in MOVES analysis
         outputemissions = etree.Element("outputemissionsbreakdownselection")
         etree.SubElement(outputemissions, "modelyear", selected="false")
-        # @TODO: change fueltype selected to True
+        # @TODO (fixed): change fueltype selected to True (waiting to see if it's necessary to run all fuel types)
         etree.SubElement(outputemissions, "fueltype", selected="false")
-        etree.SubElement(outputemissions, "fuelsubtype", selected="false")
+        etree.SubElement(outputemissions, "fuelsubtype", selected="true")
         etree.SubElement(outputemissions, "emissionprocess", selected="true")
         etree.SubElement(outputemissions, "onroadoffroad", selected="true")
         etree.SubElement(outputemissions, "roadtype", selected="true")
@@ -1287,6 +1406,8 @@ class MOVES(Module):
         lookupflag.set("truncateactivity", "true")
         lookupflag.set("truncatebaserates", "true")
 
+        skip_dom_val = etree.Element("skipdomaindatabasevalidation", selected="false")
+
         # Create XML element tree for MOVES geographic selection
         geoselect = etree.Element("geographicselection", type="COUNTY")
         geoselect.set("key", fips)
@@ -1318,15 +1439,22 @@ class MOVES(Module):
 
         # Create XML element tree for MOVES vehicle type
         # @TODO connect all of these items back to user input
-        # @NOTE can lists instead of individual types be specified here -
-        # for running multiple vehicle types?
         # XML for vehicle type selections
         # combination short-haul truck
-        vehicle_selection = etree.Element("onroadvehicleselection",
-                                          fueltypeid=self.fuel_supply_fuel_type_id.__str__())
-        vehicle_selection.set("fueltypedesc", "Diesel Fuel")
-        vehicle_selection.set("sourcetypeid", self.source_type_id.__str__())
-        vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
+
+        fueltypedesc = {'1': 'Gasoline',
+                        '2': 'Diesel Fuel',
+                        '3': 'Compressed Natural Gas (CNG)',
+                        '9': 'Electricity'}
+
+        onroadvehicleselections = etree.Element("onroadvehicleselections")
+        for fuel_type_id in self.fuel_supply_fuel_type_id:
+
+            vehicle_selection = etree.SubElement(onroadvehicleselections,
+                                                 "onroadvehicleselection", fueltypeid=fuel_type_id)
+            vehicle_selection.set("fueltypedesc", fueltypedesc[fuel_type_id])
+            vehicle_selection.set("sourcetypeid", '61')
+            vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
 
         # Create XML element tree for MOVES pollutant processes
         # Currently includes: CO, NH3, PM10, PM2.5, SO2, NOX, VOC,
@@ -1364,45 +1492,90 @@ class MOVES(Module):
         inputdatabase.set("description", "")
 
         # Create full element tree for MOVES import file
-        _runspecfilestring = (
-            E.runspec(
-                    description,
-                    E.models(etree.Element("model", value="ONROAD")),
-                    etree.Element("modelscale", value="Rates"),
-                    etree.Element("modeldomain", value="SINGLE"),
-                    E.geographicselections(geoselect),
-                    timespan,
-                    E.onroadvehicleselections(vehicle_selection),
-                    E.offroadvehicleselections(""),
-                    E.offroadvehiclesccs(""),
-                    roadtypes,
-                    polproc,
-                    E.databaseselections(""),
-                    E.internalcontrolstrategies(internalcontrol),
-                    inputdatabase,
-                    uncertaintyparam,
-                    etree.Element("geographicoutputdetail", description="LINK"),
-                    outputemissions,
-                    outputdatabase,
-                    etree.Element("outputtimestep", value="Hour"),
-                    etree.Element("outputvmtdata", value="true"),
-                    etree.Element("outputsho", value="false"),
-                    etree.Element("outputsh", value="false"),
-                    etree.Element("outputshp", value="false"),
-                    etree.Element("outputshidling", value="true"),
-                    etree.Element("outputstarts", value="true"),
-                    etree.Element("outputpopulation", value="true"),
-                    scaleinput,
-                    etree.Element("pmsize", value="0"),
-                    outputfactors,
-                    E.savedata(""),
-                    E.donotexecute(""),
-                    gendata,
-                    etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
-                    lookupflag,
-                    # @TODO: add <skipdomaindatabasevalidation selected="false"/> element here
-                    version=self.moves_version)
-        )
+        if self.moves_version.startswith('MOVES3'):
+            _runspecfilestring = (
+                E.runspec(
+                        description,
+                        E.models(etree.Element("model", value="ONROAD")),
+                        etree.Element("modelscale", value="Rates"),
+                        etree.Element("modeldomain", value="SINGLE"),
+                        E.geographicselections(geoselect),
+                        timespan,
+                        #E.onroadvehicleselections(vehicle_selection),
+                        onroadvehicleselections,
+                        E.offroadvehicleselections(""),
+                        E.offroadvehiclesccs(""),
+                        roadtypes,
+                        polproc,
+                        E.databaseselections(""),
+                        E.internalcontrolstrategies(internalcontrol),
+                        inputdatabase,
+                        uncertaintyparam,
+                        etree.Element("geographicoutputdetail", description="LINK"),
+                        outputemissions,
+                        outputdatabase,
+                        etree.Element("outputtimestep", value="Hour"),
+                        etree.Element("outputvmtdata", value="true"),
+                        etree.Element("outputsho", value="false"),
+                        etree.Element("outputsh", value="false"),
+                        etree.Element("outputshp", value="false"),
+                        etree.Element("outputshidling", value="true"),
+                        etree.Element("outputstarts", value="true"),
+                        etree.Element("outputpopulation", value="true"),
+                        scaleinput,
+                        etree.Element("pmsize", value="0"),
+                        outputfactors,
+                        E.savedata(""),
+                        E.donotexecute(""),
+                        gendata,
+                        etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
+                        lookupflag,
+                        version=self.moves_version)
+            )
+        elif self.moves_version.startswith('MOVES5'):
+            _runspecfilestring = (
+                E.runspec(
+                        description,
+                        E.models(etree.Element("model", value="ONROAD")),
+                        etree.Element("modelscale", value="Rates"),
+                        etree.Element("modeldomain", value="SINGLE"),
+                        E.geographicselections(geoselect),
+                        timespan,
+                        #E.onroadvehicleselections(vehicle_selection),
+                        onroadvehicleselections,
+                        E.offroadvehicleselections(""),
+                        E.offroadvehiclesccs(""),
+                        roadtypes,
+                        polproc,
+                        E.databaseselections(""),
+                        E.internalcontrolstrategies(""),
+                        inputdatabase,
+                        uncertaintyparam,
+                        etree.Element("geographicoutputdetail", description="LINK"),
+                        outputemissions,
+                        outputdatabase,
+                        etree.Element("outputtimestep", value="Hour"),
+                        etree.Element("outputvmtdata", value="true"),
+                        etree.Element("outputsho", value="false"),
+                        etree.Element("outputsh", value="false"),
+                        etree.Element("outputshp", value="false"),
+                        etree.Element("outputshidling", value="true"),
+                        etree.Element("outputstarts", value="true"),
+                        etree.Element("outputpopulation", value="true"),
+                        scaleinput,
+                        etree.Element("pmsize", value="0"),
+                        outputfactors,
+                        E.savedata(""),
+                        E.donotexecute(""),
+                        gendata,
+                        etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
+                        lookupflag,
+                        skip_dom_val,
+                        # @TODO (fixed): add <skipdomaindatabasevalidation selected="false"/> element here
+                        version=self.moves_version)
+            )
+
+
 
         # Transform element tree to string and save to file
 
@@ -2005,7 +2178,7 @@ class MOVES(Module):
             _exclude_fips = self._get_cached_results()
 
             _kvals = {'h': self.config.get('moves_db_host'),
-                      'db': self.config.get('moves_database'),
+                      'db': self.config.get('moves_output_db'),
                       'f': _exclude_fips}
 
             # if there are any FIPS with results extant
@@ -2060,6 +2233,24 @@ class MOVES(Module):
                                     import_file=self.xmlimport_filename)
                 os.system(command)  # @TODO: need to capture output, catch errors
 
+                # fix I/M Program flag
+                im_sql_del = """DELETE FROM {db_in}.auditlog
+                             WHERE importerName = 'I/M Programs Flag';""".format(db_in=self.db_in)
+                            
+                im_sql_ins = """INSERT INTO {db_in}.auditlog
+                             (whenHappened, importerName, briefDescription, fullDescription)
+                             VALUES (NOW(), 'I/M Programs Flag', 'No data needed', '');""".format(db_in=self.db_in)
+                # open cursor
+                try:
+                    _moves_cursor = self.conn.cursor()
+
+                    _moves_cursor.execute(im_sql_del)
+                    _moves_cursor.execute(im_sql_ins)
+                except pymysql.err.MySQLError as _mysqlerror:
+                    LOGGER.error('I/M Program was NOT de-selected: %s' % _mysqlerror)
+                finally:
+                    _moves_cursor.close()
+ 
                 # execute MOVES and log output
                 LOGGER.info('running MOVES for FIPS: %s' % _fips)
                 LOGGER.debug('runspec file: %s' % self.runspec_filename)
