@@ -93,7 +93,7 @@ class FugitiveDust(Module):
         _df = self.prod_onfarm.merge(self.fugitive_dust_factors, on=self.prod_idx)
 
         # calculate fugitive dust
-        _df.eval('pollutant_amount = feedstock_amount * rate', inplace=True)
+        _df = _df.assign(pollutant_amount=_df['feedstock_amount'] * _df['rate'])
 
         # add column to identify module
         _df['module'] = 'fugitive dust'
@@ -137,10 +137,11 @@ class FugitiveDust(Module):
             self.feedstock_loss_factors.supply_chain_stage.isin(['farm gate'])]
 
         # calculate total losses on farm, remove unnecessary columns
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False)
-        _loss_factors_farmgate = _loss_factors_farmgate.prod()[['feedstock',
-                                                                'dry_matter_remaining']]
+        # select only numeric-compatible columns before .prod() to avoid
+        # pandas 2.x TypeError on string columns
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # grab relevant prod data frame - preprocessed in init
         _prod = self.prod_onroad
@@ -259,10 +260,11 @@ class FugitiveDust(Module):
                     _vmt_by_county_all_routes = _vmt_by_county
 
                 else:
-                    _vmt_by_county_all_routes = \
-                        _vmt_by_county_all_routes.append(_vmt_by_county,
-                                                         ignore_index=True,
-                                                         sort=True)
+                    _vmt_by_county_all_routes = pd.concat(
+                        [_vmt_by_county_all_routes, _vmt_by_county],
+                        ignore_index=True,
+                        sort=True,
+                    )
 
             # @todo what's fclass and is this the correct treatment?
             _vmt_by_county_all_routes = _vmt_by_county_all_routes.groupby(['region_transportation',
@@ -373,9 +375,11 @@ class FugitiveDust(Module):
             _status = 'failed'
         else:
             _status = 'complete'
-            _results = _results_onfarm.append(_results_onroad,
-                                              ignore_index=True,
-                                              sort=False)
+            _results = pd.concat(
+                [_results_onfarm, _results_onroad],
+                ignore_index=True,
+                sort=False,
+            )
         finally:
             self.status = _status
             self.results = _results

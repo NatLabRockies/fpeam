@@ -71,9 +71,58 @@ target/
 IrrigationAcres.py
 LoadIrrigationData.py
 
+# Editor / OS junk
+.vscode/
 *.swp
 .*~
 *.py~
 *.spec~
-*.csv~
+*~
+
+# Wheels and built distributions stored alongside repo
 *.whl
+
+# Jupyter / runtime scratch
+.ipynb_checkpoints/
+Untitled*.ipynb
+
+# CSV editor backups
+*.csv~
+
+# FPEAM run output directory (keep out of repo)
+/prj_path/
+
+# FPEAM generated outputs (run artifacts, not source)
+/src/FPEAM/data/outputs/full_run_*.csv
+
+# FPEAM production data backups (versioned outside git on purpose)
+/src/FPEAM/data/production/backups/
+
+# Toolkit-generated test files (stay local-only)
+/tests/__init__.py
+/tests/unit_tests/__init__.py
+/tests/unit_tests/test_copilot_tool_policy.py
+
+# Pixi environment cache (local-only)
+/.pixi/
+
+# Agent workflow scaffolding (toolkit-managed, kept out of repo)
+/AGENTS.md
+/MEMORY.md
+/MANIFEST.in
+/pyproject.toml
+/test_repo.sh
+/scripts/
+/ai_context/
+/config/
+/.github/agents/
+/.github/instructions/
+/.github/hooks/
+/.github/copilot-instructions.md
+/.github/ISSUE_TEMPLATE/agent-task.yml
+/docs/AGENT_SYNC.md
+/docs/CAVEMAN_CONTEXT.md
+/docs/ENGINEERING_MANIFEST.md
+/docs/decision_log.md
+/docs/review_register.md
+/docs/scope_backlog.md

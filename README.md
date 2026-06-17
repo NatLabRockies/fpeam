@@ -1,3 +1,87 @@
+# FPEAM — Feedstock Production Emissions to Air Model
+
+## Quick start
+
+**Requirements:** Python 3.11+, [Pixi](https://pixi.sh), MOVES 3 or 5 (Windows, for MOVES/NONROAD modules), MySQL.
+
+### Install
+
+```bash
+git clone git@github.com:NatLabRockies/fpeam.git
+cd fpeam
+# Pixi installs the environment and all Python dependencies:
+pixi install
+# Or use pip in an existing env:
+pip install -e .
+```
+
+### Run the emission-factors module (no MOVES/NONROAD required)
+
+```bash
+fpeam --emissionfactors_config src/FPEAM/configs/emissionfactors.ini \
+      src/FPEAM/configs/run_config.ini
+```
+
+Results are written to `project_path` defined in `run_config.ini`.
+
+### Run all modules (requires MOVES/NONROAD)
+
+```bash
+fpeam --moves_config my_moves.ini \
+      --nonroad_config my_nonroad.ini \
+      --emissionfactors_config my_ef.ini \
+      --fugitivedust_config my_fd.ini \
+      run_config.ini
+```
+
+See [config templates](src/FPEAM/configs/) (`.spec` files are annotated specs; `.ini` files are defaults).
+
+### Run tests
+
+```bash
+pixi run test      # pytest via pixi
+# or without pixi:
+PYTHONPATH=src python -m pytest tests/
+```
+
+## Modules
+
+| Module | Pollutants | Activities |
+| :----- | :-------------------: | :------------------ |
+| MOVES | CO, NH₃, NOₓ, SO₂, VOC, PM₂.₅, PM₁₀ | Off-farm on-road biomass transportation |
+| NONROAD | All | On-farm agricultural equipment use |
+| EmissionFactors | VOC, NH₃, NOₓ, CO₂eq | Fertilizer/pesticide/herbicide application; extensible |
+| FugitiveDust | PM₂.₅, PM₁₀ | On-farm equipment use; on-road transportation |
+
+## Configuration
+
+Each module has a `.spec` file (annotated schema) and a `.ini` file (defaults) under `src/FPEAM/configs/`. The run config (`run_config.ini`) sets shared parameters: scenario name, project path, input data paths, active modules.
+
+### Database credentials
+
+MOVES and NONROAD require a MySQL connection. Supply credentials in your `.ini` config files:
+
+```ini
+[moves]
+moves_db_host = localhost
+moves_db_user = root
+moves_db_pass = <your password>   # never use a default here
+```
+
+## Developer notes
+
+- Source layout: `src/FPEAM/` (package root), `src/FPEAM/EngineModules/` (MOVES, NONROAD, EmissionFactors, FugitiveDust).
+- CI runs on push/PR to `dev` and `master` via `.github/workflows/test.yml`.
+- Contributing: branch off `dev`, open a PR targeting `dev`.
+- Architecture overview: [`docs/architecture.md`](docs/architecture.md)
+- Output file reference: [`docs/outputs.md`](docs/outputs.md)
+
+## GUI (legacy)
+
+`src/FPEAM/gui/` contains a PyQt5 graphical interface (`AllModuleTab.py`) developed for Windows. It is **not tested or exercised by CI** and should be considered unmaintained. All current functionality is accessible through the CLI or Python API.
+
+---
+
 # Introduction
 
 The Feedstock Production Emissions to Air Model (FPEAM) calculates spatially explicit inventories of criteria air pollutants and precursors generated from agricultural and transportation activities associated with the production and supply of biomass feedstocks for renewable energy generation. FPEAM was originally developed to calculate air pollutants as part of the 2016 update to the Billion Ton Study (BTS). For this version of FPEAM, the code base has been substantially refactored and streamlined to provide increased flexibility around biomass production scenario definitions, including what activities and pollutants are included in the calculations and at what spatial scale. This document describes the FPEAM code base and default input files bundled with the beta model release.

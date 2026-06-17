@@ -1,7 +1,7 @@
 """Input and output helper utilities."""
 
 import os
-from pkg_resources import resource_filename
+import importlib.resources
 
 import pandas as pd
 
@@ -11,6 +11,13 @@ CONFIG_FOLDER = 'configs'
 DATA_FOLDER = 'data'
 
 LOGGER = utils.logger(name=__name__)
+
+_FPEAM_PKG = importlib.resources.files('FPEAM')
+
+
+def _resource_path(relpath):
+    """Return absolute filesystem path to a bundled FPEAM resource."""
+    return str(_FPEAM_PKG.joinpath(relpath))
 
 
 def load_configs(*fpath):
@@ -29,7 +36,7 @@ def load_configs(*fpath):
 
     # add local config if available
     try:
-        _local_fpath = resource_filename('FPEAM', '%s/local.ini' % CONFIG_FOLDER)
+        _local_fpath = _resource_path('%s/local.ini' % CONFIG_FOLDER)
     except KeyError:
         pass
     else:
@@ -69,14 +76,15 @@ def load(fpath, columns, memory_map=True, header=0, **kwargs):
         _df = pd.read_csv(filepath_or_buffer=fpath, sep=',', dtype=columns,
                           usecols=columns.keys(), memory_map=memory_map, header=header, **kwargs)
     except ValueError as e:
-        if e.__str__() == 'Usecols do not match names.':
-            from collections import Counter
-            _df = pd.read_table(filepath_or_buffer=fpath, sep=',', dtype=columns,
-                                memory_map=memory_map, header=header, **kwargs)
-            _df_columns = Counter(_df.columns)
-            _cols = list(set(columns.keys()) - set(_df_columns))
-            raise ValueError('%(f)s missing columns: %(cols)s' % (dict(f=fpath, cols=_cols)))
+        _msg = str(e)
+        # pandas raises "Usecols do not match names." (pandas <2) or
+        # "Usecols do not match columns" (pandas >=2) for missing columns
+        if 'Usecols do not match' in _msg:
+            _df_check = pd.read_csv(filepath_or_buffer=fpath, sep=',',
+                                    memory_map=memory_map, header=header)
+            _missing = list(set(columns.keys()) - set(_df_check.columns))
+            raise ValueError('%s missing columns: %s' % (fpath, _missing))
         else:
-            raise e
+            raise
     else:
         return _df

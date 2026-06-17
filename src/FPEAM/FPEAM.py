@@ -1,18 +1,13 @@
 import os
-import shutil
 import sys
 import tempfile
-
-if sys.version_info[1] >= 10:
-    from collections.abc import Iterable
-else:
-    from collections import Iterable
+from collections.abc import Iterable
+from importlib.resources import files as _pkg_files
 
 import geopandas
 import pandas as pd
 from FPEAM import EngineModules
 from joblib import Memory
-from pkg_resources import resource_filename
 from shapely.geometry import MultiPolygon
 
 from . import Data
@@ -26,7 +21,7 @@ LOGGER = utils.logger(name=__name__)
 class FPEAM(object):
     """Base class to hold shared information"""
 
-    __version__ = '2.4.0'
+    __version__ = '2.5.0'
 
     MODULES = {'emissionfactors': EngineModules.EmissionFactors,
                'fugitivedust': EngineModules.FugitiveDust,
@@ -51,7 +46,8 @@ class FPEAM(object):
 
         self.router = None
 
-        self._temp_dir = tempfile.mkdtemp()
+        self._temp_dir_obj = tempfile.TemporaryDirectory()
+        self._temp_dir = self._temp_dir_obj.name
 
         self.memory = Memory(location=self._temp_dir)
 
@@ -97,7 +93,7 @@ class FPEAM(object):
 
         for _module in _modules:
             _config = run_config.get(_module.lower(), None) or \
-                      load_configs(resource_filename('FPEAM', '%s/%s.ini' % (CONFIG_FOLDER, _module.lower()))
+                      load_configs(str(_pkg_files('FPEAM').joinpath('%s/%s.ini' % (CONFIG_FOLDER, _module.lower())))
                                    )[_module.lower()]
             _config['scenario_name'] = _config.get('scenario_name', '').strip() or self.config.get('scenario_name')
 
@@ -133,16 +129,16 @@ class FPEAM(object):
     @config.setter
     def config(self, value):
 
-        _fpeam_spec = resource_filename('FPEAM', '%s/fpeam.spec' % (CONFIG_FOLDER, ))
+        _fpeam_spec = str(_pkg_files('FPEAM').joinpath('%s/fpeam.spec' % (CONFIG_FOLDER, )))
 
         try:
             _fpeam_config = value['fpeam']
         except KeyError:
-            _fpeam_config = resource_filename('FPEAM', '%s/fpeam.ini' % (CONFIG_FOLDER, ))
+            _fpeam_config = str(_pkg_files('FPEAM').joinpath('%s/fpeam.ini' % (CONFIG_FOLDER, )))
 
         _fpeam_config = utils.validate_config(config=_fpeam_config, spec=_fpeam_spec)
 
-        _spec = resource_filename('FPEAM', '%s/run_config.spec' % (CONFIG_FOLDER, ))
+        _spec = str(_pkg_files('FPEAM').joinpath('%s/run_config.spec' % (CONFIG_FOLDER, )))
         _config = utils.validate_config(config=value['run_config'], spec=_spec)
 
         _config['config']['fpeam'] = _fpeam_config['config']
@@ -211,15 +207,16 @@ class FPEAM(object):
                                                                                       'on farm transport'])]
 
         # calculate total remaining fraction by feedstock by multiplying
-        # the remaining fractions
-        _loss_factors = _loss_factors.groupby(['feedstock'],
-                                              as_index=False).prod()[['feedstock',
-                                                                      'dry_matter_remaining']]
+        # the remaining fractions; select numeric columns only to avoid
+        # pandas 2.x TypeError on string columns
+        _loss_factors = _loss_factors[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # calculate total remaining fraction at farm gate
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'],
-                                                                as_index=False).prod()[['feedstock',
-                                                                                        'dry_matter_remaining']]
+        _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']]\
+            .groupby(['feedstock'], as_index=False)\
+            .prod()[['feedstock', 'dry_matter_remaining']]
 
         # subset the feedstock production df by which feedstock measures
         # will be used in normalizing pollutant amounts
@@ -268,18 +265,22 @@ class FPEAM(object):
         del _prod_losses['dry_matter_remaining'], _prod_losses_farmgate['dry_matter_remaining']
 
         # tack on the delivered feedstock dataframes to the filtered one
-        _prod_filtered.append(_prod_losses, ignore_index=True, sort=False)
-        _prod_filtered.append(_prod_losses_farmgate, ignore_index=True,
-                              sort=False)
+        _prod_filtered = pd.concat(
+            [_prod_filtered, _prod_losses, _prod_losses_farmgate],
+            ignore_index=True,
+            sort=False,
+        )
 
         # loop thru all modules being run and stack the data frames
         # containing output from each module
         # this will add empty values if a data frame is missing a column,
         # which does happend for some id variables from some modules
         for _module in modules or self._modules.values():
-            _df_modules = _df_modules.append(_module.results,
-                                             ignore_index=True,
-                                             sort=False)
+            _df_modules = pd.concat(
+                [_df_modules, _module.results],
+                ignore_index=True,
+                sort=False,
+            )
 
         _df_modules['unit_numerator'] = 'lb pollutant'
         _df_modules['unit_denominator'] = 'county-year'
@@ -333,7 +334,7 @@ class FPEAM(object):
                                                                                   'unit_denominator']]
         if self.config['fpeam'].get('inmap_county_export', False) is True:
             # save InMAP county-level output
-            _shp_fpath_in = resource_filename('FPEAM', 'data/inputs/tl_2019_us_county/tl_2019_us_county.shp')
+            _shp_fpath_in = str(_pkg_files('FPEAM').joinpath('data/inputs/tl_2019_us_county/tl_2019_us_county.shp'))
             _df = geopandas.read_file(_shp_fpath_in, dtype={'STATEFP': str, 'COUNTYFP': str, 'geometry': MultiPolygon})[['STATEFP', 'COUNTYFP', 'NAME', 'geometry']]
             _df['region_production'] = _df.STATEFP + _df.COUNTYFP
 
@@ -443,7 +444,10 @@ class FPEAM(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        shutil.rmtree(self._temp_dir)
+        try:
+            self._temp_dir_obj.cleanup()
+        except Exception:
+            LOGGER.warning('failed to clean up temp directory: %s' % self._temp_dir)
 
         # process exceptions
         if exc_type is not None:

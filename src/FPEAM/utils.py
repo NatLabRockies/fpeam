@@ -17,6 +17,29 @@ def logger(name='FPEAM'):
     return logging.getLogger(name=name)
 
 
+def configure_logging(level='INFO', fmt=None):
+    """
+    Configure root logging for FPEAM applications.
+
+    Call this once from scripts or CLI entrypoints; library callers should
+    configure logging themselves.  Idempotent: adding a second StreamHandler
+    is guarded by checking whether any handlers already exist on the root.
+
+    :param level: [str] logging level name, e.g. 'DEBUG', 'INFO', 'WARNING'
+    :param fmt: [str|None] log format string; defaults to a compact timestamped format
+    """
+    root = logging.getLogger()
+    if root.handlers:
+        return  # already configured
+
+    if fmt is None:
+        fmt = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(fmt))
+    root.addHandler(handler)
+    root.setLevel(getattr(logging, level.upper(), logging.INFO))
+
+
 def validate_config(config, spec):
     """
     Perform validation against <config> using <spec>, returning type-casted ConfigObj, any errors,
@@ -84,7 +107,7 @@ def filepath(fpath, max_length=None):
 
     from os.path import exists, abspath, expanduser
     from pathlib import Path
-    from pkg_resources import resource_filename
+    from importlib.resources import files as _pkg_files
 
     # get a full path
     if fpath.startswith('~'):
@@ -104,7 +127,7 @@ def filepath(fpath, max_length=None):
     except AssertionError:
         # convert to resource filename if not regular file
         try:
-            _fpath = resource_filename('FPEAM', _fpath)
+            _fpath = str(_pkg_files('FPEAM').joinpath(_fpath))
         except ValueError:
             raise VdtPathDoesNotExist(value=fpath)
     else:

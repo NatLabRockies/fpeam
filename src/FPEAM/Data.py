@@ -17,22 +17,26 @@ class Data(pd.DataFrame):
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
 
-        _df = pd.DataFrame({}) if df is None and fpath is None else load(fpath=fpath,
-                                                                         columns=columns)
+        if df is not None:
+            _df = pd.DataFrame(df)
+        elif fpath is not None:
+            _df = load(fpath=fpath, columns=columns)
+        else:
+            _df = pd.DataFrame({})
 
         super(Data, self).__init__(data=_df)
 
         self.source = fpath or 'DataFrame'
 
-        _valid = self.validate()
-
-        try:
-            assert _valid is True
-        except AssertionError:
-            if df is not None or fpath is not None:
-                raise RuntimeError('{} failed validation'.format(__name__, ))
-            else:
-                pass
+        # Only enforce validation when the caller supplied data; empty
+        # default construction is allowed for subclassing/composition.
+        if df is not None or fpath is not None:
+            if not self.validate():
+                raise RuntimeError(
+                    '{cls} failed validation (source={src})'.format(
+                        cls=type(self).__name__, src=self.source,
+                    )
+                )
 
         if backfill:
             for _column in self.COLUMNS:
@@ -59,8 +63,8 @@ class Data(pd.DataFrame):
             # count the total values
             _count_total = self[column].__len__()
 
-            # fill the missing values with zeros
-            self[column].fillna(value, inplace=True)
+            # fill the missing values
+            self[column] = self[column].fillna(value)
 
             # log a warning with the number of missing values
             LOGGER.warning('%s of %s data values in %s.%s were backfilled as %s' %
@@ -196,6 +200,14 @@ class EmissionFactor(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # If loading from file, include 'region' when the CSV has that column
+        # so region-keyed factors are carried through unchanged.
+        if fpath is not None and 'region' not in columns:
+            import pandas as _pd
+            _header = _pd.read_csv(fpath, nrows=0).columns.tolist()
+            if 'region' in _header:
+                columns = dict(columns)
+                columns['region'] = str
         super(EmissionFactor, self).__init__(df=df, fpath=fpath, columns=columns,
                                              backfill=backfill)
 
@@ -347,12 +359,12 @@ class RegionFipsMap(Data):
             assert self.region.nunique() == self.fips.nunique()
         except AssertionError:
             _region_counts = self.region.value_counts()
-            _dup_regions = list(_region_counts.loc[_region_counts != 1].values)
+            _dup_regions = list(_region_counts.loc[_region_counts != 1].index)
             if _dup_regions:
                 LOGGER.error('Duplicated region values in region_fips_map data: %s' % _dup_regions)
 
             _fips_counts = self.fips.value_counts()
-            _dup_fips = list(_fips_counts.loc[_region_counts != 1].values)
+            _dup_fips = list(_fips_counts.loc[_fips_counts != 1].index)
             if _dup_fips:
                 LOGGER.error('Duplicated FIPS values in region_fips_map data: %s' % _dup_fips)
             raise ValueError('region_fips_map data must have only 1 '
@@ -399,3 +411,72 @@ class AVFT(Data):
         super(AVFT, self).__init__(df=df, fpath=fpath, columns=columns, backfill=backfill)
 
     # @todo validate: any missing values generates error (filling in with zeros or NaNs may break MOVES)
+
+
+class GeophysicalContext(Data):
+    """Geophysical and meteorological context keyed by region and time period.
+
+    Used by dynamic emission-factor providers (e.g. AmmoniaFertilizerProvider)
+    that require climate or soil data to compute spatially explicit emission rates.
+
+    All columns except ``region`` are optional; providers declare which ones they
+    require.  Load from a CSV with any subset of the columns below::
+
+        region,year,month,temperature_c,wind_speed_m_s,precipitation_mm,soil_type
+        17031,2017,6,22.5,3.2,45.0,silty clay loam
+
+    Columns
+    -------
+    region : str
+        Region key that matches ``region_production`` in production data.
+    year : int (optional)
+        Scenario year.
+    month : int (optional)
+        Month (1–12).  Omit for annual averages.
+    temperature_c : float (optional)
+        Mean air temperature in degrees Celsius.
+    wind_speed_m_s : float (optional)
+        Mean wind speed in m/s at 2 m height.
+    precipitation_mm : float (optional)
+        Total precipitation in mm over the relevant period.
+    soil_type : str (optional)
+        USDA soil texture class (e.g. ``silty clay loam``, ``sandy loam``).
+    """
+
+    # Only 'region' is strictly required; all other columns are context-dependent.
+    COLUMNS = (
+        {'name': 'region', 'type': str, 'index': True, 'backfill': None},
+    )
+
+    # Optional context columns with their expected types
+    OPTIONAL_COLUMNS = {
+        'year': int,
+        'month': int,
+        'temperature_c': float,
+        'wind_speed_m_s': float,
+        'precipitation_mm': float,
+        'soil_type': str,
+    }
+
+    def __init__(self, df=None, fpath=None, backfill=False):
+        # Detect which optional context columns are present in the source
+        columns = {d['name']: d['type'] for d in self.COLUMNS}
+        if fpath is not None:
+            import pandas as _pd
+            _header = _pd.read_csv(fpath, nrows=0).columns.tolist()
+            for col, dtype in self.OPTIONAL_COLUMNS.items():
+                if col in _header:
+                    columns[col] = dtype
+        elif df is not None:
+            for col, dtype in self.OPTIONAL_COLUMNS.items():
+                if col in df.columns:
+                    columns[col] = dtype
+        super(GeophysicalContext, self).__init__(df=df, fpath=fpath,
+                                                 columns=columns, backfill=backfill)
+
+    def validate(self):
+        """Require that the 'region' column is present."""
+        if 'region' not in self.columns:
+            LOGGER.error('GeophysicalContext requires a "region" column')
+            return False
+        return super().validate()

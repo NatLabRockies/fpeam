@@ -5,7 +5,7 @@ from subprocess import Popen
 import numpy as np
 import pandas as pd
 import pymysql
-from pkg_resources import resource_filename
+from importlib.resources import files as _pkg_files
 
 from FPEAM import utils
 from .Module import Module
@@ -88,7 +88,7 @@ class NONROAD(Module):
 
         # mapping from 2-digit state FIPS to two-character state name
         # abbreviations
-        _fpath = resource_filename('FPEAM', '%s/inputs/state_fips_map.csv' % DATA_FOLDER)
+        _fpath = str(_pkg_files('FPEAM').joinpath('%s/inputs/state_fips_map.csv' % DATA_FOLDER))
         self.state_fips_map = StateFipsMap(fpath=_fpath, backfill=backfill)
 
         # scenario year
@@ -170,7 +170,6 @@ class NONROAD(Module):
         self.production = self.production.merge(self.state_fips_map,
                                                 how='inner',
                                                 on='state_fips')
-
         # create filter to select only the feedstock measure used by NONROAD
         _prod_filter = self.production.feedstock_measure == \
             self.feedstock_measure_type
@@ -242,9 +241,11 @@ class NONROAD(Module):
                                    inplace=True)
 
         # append the irrigation activity data to the rest of the activity data
-        self.prod_equip_merge = self.prod_equip_merge.append(_prod_irr,
-                                                             ignore_index=True,
-                                                             sort=True)
+        self.prod_equip_merge = pd.concat(
+            [self.prod_equip_merge, _prod_irr],
+            ignore_index=True,
+            sort=True,
+        )
 
         # create list of unique state-feedstock-tillage type-activity
         # combinations - one population file, one allocation file and
@@ -1306,7 +1307,7 @@ FIPS       Year  SCC        Equipment Description                    HPmn  HPmx 
 
                 # append the results of this nonroad run to the full nonroad
                 #  output dataframe
-                _nr_out = _nr_out.append(_to_append, ignore_index=True)
+                _nr_out = pd.concat([_nr_out, _to_append], ignore_index=True)
 
         # calculate voc emissions in (short) tons
         _nr_out['voc'] = _nr_out.thc * self.diesel_thc_voc_conversion

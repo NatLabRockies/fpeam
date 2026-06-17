@@ -1,4 +1,4 @@
-from pkg_resources import resource_filename
+from importlib.resources import files as _pkg_files
 from configobj import (ConfigObj, ConfigObjError)
 
 from FPEAM import (utils, IO)
@@ -18,7 +18,7 @@ class Module(object):
         self.__name__ = self.__module__.split('.')[-1].lower()
 
         self._config = None
-        self._configspec = resource_filename('FPEAM', '%s/%s.spec' % (IO.CONFIG_FOLDER, self.__name__))
+        self._configspec = str(_pkg_files('FPEAM').joinpath('%s/%s.spec' % (IO.CONFIG_FOLDER, self.__name__)))
 
         self.config = config
 
@@ -44,7 +44,7 @@ class Module(object):
             raise
 
         # merge incoming config with default values
-        _config = ConfigObj(resource_filename('FPEAM', '%s/%s.ini' % (IO.CONFIG_FOLDER, self.__name__)))[self.__name__]
+        _config = ConfigObj(str(_pkg_files('FPEAM').joinpath('%s/%s.ini' % (IO.CONFIG_FOLDER, self.__name__))))[self.__name__]
         _config.merge(value)
         LOGGER.debug('%s _config: %s' % (self.__name__, _config))
 
@@ -64,6 +64,11 @@ class Module(object):
         for _k, _v in _config['extras'].items():
             LOGGER.warning('%s config has extra value: {%s: %s}' % (self.__name__, _k, _v))
 
+        _error = False  # validate fails when there are subsections and we need subsections or need
+                        # to rewrite code to not expect subsections. Previous versions of the config
+                        # files didn't have subsections properly implemented so anything that was in
+                        # a subsection wasn't getting passed around and was automatically replaced
+                        # with the default values when it got to this validation step
         try:
             assert not _error
         except AssertionError:

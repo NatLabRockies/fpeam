@@ -1,0 +1,22 @@
+[workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64"]
+
+[dependencies]
+python = ">=3.11"
+configobj = ">=5.0"
+pandas = ">=2.0"
+setuptools = ">=70,<82"
+ruff = ">=0.8"
+pymysql = ">=1.1"
+lxml = ">=5.0"
+networkx = ">=3.0"
+scipy = ">=1.10"
+joblib = ">=1.3"
+geopandas = ">=0.14"
+shapely = ">=2.0"
+pytest = ">=8.0"
+
+[tasks]
+test = "env PYTHONPATH=src python -m pytest tests/ -v"
+lint = "ruff check src/"

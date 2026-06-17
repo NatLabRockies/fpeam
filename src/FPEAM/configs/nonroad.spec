@@ -41,7 +41,8 @@ irrigation = filepath(default='data/inputs/irrigation.csv')
 nonroad_database = string(default='movesdb20220802')
 nonroad_db_port = integer(default=3306)
 nonroad_db_user = string(default='root')
-nonroad_db_pass = string(default='root')
+# Password has no default; supply via config file or FPEAM_NONROAD_DB_PASS env var
+nonroad_db_pass = string()
 nonroad_db_host = string(default='localhost')
 
 
