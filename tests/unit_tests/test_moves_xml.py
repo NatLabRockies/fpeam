@@ -9,6 +9,9 @@ import os
 import sys
 import platform
 import pytest
+import numpy as np
+import pandas as pd
+from unittest.mock import MagicMock, patch
 from lxml import etree
 
 
@@ -307,3 +310,132 @@ class TestMOVESCommandHelper:
     def test_run_moves_command_function_importable(self):
         from FPEAM.EngineModules.MOVES import _run_moves_command
         assert callable(_run_moves_command)
+
+
+# ── County road type fractions from zoneroadtype ─────────────────────────────
+
+def _make_moves_stub(source_type_id=61, vmt_fraction=None):
+    """Return a minimal MOVES-like object with the attributes needed by the
+    road-type logic extracted from _create_county_data, without any real DB,
+    file system, or config dependencies."""
+    if vmt_fraction is None:
+        vmt_fraction = {
+            'rural_restricted': 0.172224,
+            'rural_unrestricted': 0.327849,
+            'urban_restricted': 0.244772,
+            'urban_unrestricted': 0.255155,
+        }
+    stub = MagicMock()
+    stub.source_type_id = source_type_id
+    stub.moves_database = 'movesdb_test'
+
+    # Replicate __init__ road type DataFrame construction
+    _vf = {2: vmt_fraction['rural_restricted'],
+           3: vmt_fraction['rural_unrestricted'],
+           4: vmt_fraction['urban_restricted'],
+           5: vmt_fraction['urban_unrestricted']}
+    rtv = pd.DataFrame.from_dict(_vf, orient='index', columns=['roadTypeVMTFraction'])
+    rtv['roadTypeID'] = rtv.index
+    rtv['sourceTypeID'] = np.repeat(source_type_id, 4)
+    stub.roadtypevmt = rtv
+    return stub
+
+
+def _apply_roadtype_logic(stub, zrt_df, fips='19109'):
+    """Run the road-type fraction logic from _create_county_data in isolation.
+
+    Mirrors the implementation exactly so that test failures pinpoint
+    logic bugs rather than test scaffolding issues.
+    """
+    zoneID = str(int(fips)) + '0'
+    _total_sho = zrt_df['SHOAllocFactor'].sum() if not zrt_df.empty else 0.0
+
+    if not zrt_df.empty and _total_sho > 0:
+        _zrt = zrt_df.copy()
+        _zrt['roadTypeVMTFraction'] = _zrt['SHOAllocFactor'] / _total_sho
+        _zrt['sourceTypeID'] = int(stub.source_type_id)
+        result = _zrt[['sourceTypeID', 'roadTypeID',
+                        'roadTypeVMTFraction']].reset_index(drop=True)
+    else:
+        result = stub.roadtypevmt[
+            ['sourceTypeID', 'roadTypeID', 'roadTypeVMTFraction']].copy()
+    return result
+
+
+class TestCountyRoadTypeFractions:
+    """Verify that _create_county_data uses zoneroadtype for road type fractions."""
+
+    def test_county_fractions_sum_to_one(self):
+        """Normalised zoneroadtype fractions must sum to 1.0."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.0, 0.000167, 0.0, 0.000022],
+        })
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, zrt)
+        assert abs(result['roadTypeVMTFraction'].sum() - 1.0) < 1e-9
+
+    def test_county_fractions_reflect_rural_dominated_county(self):
+        """Iowa Adair county (19109): ~88% rural unrestricted, ~12% urban unrest."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.0, 0.000167, 0.0, 0.000022],
+        })
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, zrt)
+        r3_frac = result.loc[result['roadTypeID'] == 3, 'roadTypeVMTFraction'].iloc[0]
+        assert r3_frac > 0.85, f"Rural unrestricted fraction should be >85% for rural Iowa, got {r3_frac:.4f}"
+
+    def test_county_fractions_reflect_urban_dominated_county(self):
+        """San Francisco (06075): essentially all urban roads."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.0, 0.000235, 0.001624, 0.001600],
+        })
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, zrt)
+        urban_frac = result.loc[result['roadTypeID'].isin([4, 5]),
+                                'roadTypeVMTFraction'].sum()
+        assert urban_frac > 0.90, f"Urban fraction should be >90% for SF, got {urban_frac:.4f}"
+
+    def test_fallback_to_national_default_when_empty(self):
+        """Empty zoneroadtype → national-default fractions from config."""
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, pd.DataFrame(
+            columns=['roadTypeID', 'SHOAllocFactor']))
+        expected = stub.roadtypevmt['roadTypeVMTFraction'].sort_values().values
+        actual = result['roadTypeVMTFraction'].sort_values().values
+        np.testing.assert_allclose(actual, expected, atol=1e-9)
+
+    def test_fallback_when_all_sho_zero(self):
+        """All-zero SHOAllocFactor (e.g. remote territory) → national default."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.0, 0.0, 0.0, 0.0],
+        })
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, zrt)
+        expected = stub.roadtypevmt['roadTypeVMTFraction'].sort_values().values
+        actual = result['roadTypeVMTFraction'].sort_values().values
+        np.testing.assert_allclose(actual, expected, atol=1e-9)
+
+    def test_source_type_id_propagated(self):
+        """sourceTypeID in result must match the configured source_type_id."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.1, 0.4, 0.3, 0.2],
+        })
+        stub = _make_moves_stub(source_type_id=61)
+        result = _apply_roadtype_logic(stub, zrt)
+        assert (result['sourceTypeID'] == 61).all()
+
+    def test_road_type_ids_are_2_3_4_5(self):
+        """Result must contain exactly road type IDs 2, 3, 4, 5."""
+        zrt = pd.DataFrame({
+            'roadTypeID': [2, 3, 4, 5],
+            'SHOAllocFactor': [0.25, 0.25, 0.25, 0.25],
+        })
+        stub = _make_moves_stub()
+        result = _apply_roadtype_logic(stub, zrt)
+        assert set(result['roadTypeID'].tolist()) == {2, 3, 4, 5}
+

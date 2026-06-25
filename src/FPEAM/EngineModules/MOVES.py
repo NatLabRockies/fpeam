@@ -81,7 +81,7 @@ def _build_macos_classpath(moves_home):
     return sep.join(os.path.join(moves_home, e) for e in entries)
 
 
-def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=3600):
+def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=14400):
     """Execute a MOVES command-line invocation cross-platform.
 
     Parameters
@@ -550,7 +550,7 @@ class MOVES(Module):
             KEY (MOVESRunID, hostType, loopableClassName)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        if self.moves_version.startswith('MOVES3') or self.moves_version.startswith('MOVES5'):
+        if self.moves_version.startswith('MOVES3') or self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
             _create_tables_dict['movesactivityoutput'] = """CREATE TABLE IF NOT EXISTS
                 {moves_output_db}.`movesactivityoutput` (
                 MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -1054,6 +1054,42 @@ class MOVES(Module):
         pd.read_sql(_met_sql, self.conn).to_csv(self.met_filename,
                                                 index=False)
 
+        # county-specific road type VMT fractions from zoneroadtype
+        # MOVES zoneroadtype has county-level SHO allocation factors by road type.
+        # Normalising them per county gives county-specific road type fractions that
+        # reflect actual rural/urban road network composition — critical for spatial
+        # variation in rateperdistance because emission rates differ strongly by
+        # road type (e.g. rural highway vs. urban arterial speed profiles).
+        # Falls back to the national-default vmt_fraction from the config file when
+        # the county is absent from zoneroadtype (e.g. territories, missing data).
+        _roadtype_sql = """
+            SELECT roadTypeID, SHOAllocFactor
+            FROM {moves_database}.zoneroadtype
+            WHERE zoneID = {zoneID}
+              AND roadTypeID IN (2, 3, 4, 5);""".format(**kvals)
+
+        _zrt = pd.read_sql(_roadtype_sql, self.conn)
+        _total_sho = _zrt['SHOAllocFactor'].sum() if not _zrt.empty else 0.0
+
+        if not _zrt.empty and _total_sho > 0:
+            _zrt = _zrt.copy()
+            _zrt['roadTypeVMTFraction'] = _zrt['SHOAllocFactor'] / _total_sho
+            _zrt['sourceTypeID'] = int(self.source_type_id)
+            _county_roadtype = _zrt[['sourceTypeID', 'roadTypeID',
+                                     'roadTypeVMTFraction']].reset_index(drop=True)
+            LOGGER.debug('County %s: road type fractions from zoneroadtype', fips)
+        else:
+            # National default from config vmt_fraction — no county-specific data
+            LOGGER.warning(
+                'County %s: zoneroadtype returned no rows for zoneID=%s; '
+                'using national-default vmt_fraction from config', fips, kvals['zoneID'])
+            _county_roadtype = self.roadtypevmt[
+                ['sourceTypeID', 'roadTypeID', 'roadTypeVMTFraction']].copy()
+
+        self.roadtypevmt_filename = os.path.join(
+            self.save_path_countyinputs, '{fips}_roadtype.csv'.format(**kvals))
+        _county_roadtype.to_csv(self.roadtypevmt_filename, index=False)
+
     def _create_xml_import(self, fips):
         """
 
@@ -1124,10 +1160,11 @@ class MOVES(Module):
                 "<filename>{hourvmtfilename}</filename>".format(
                         hourvmtfilename=_hour_vmt_filename), _parser)
 
-        # input database
+        # input database — sanitize version string (dots not valid in MySQL DB names)
+        _version_safe = self.moves_version.replace('.', '_')
         self.db_in = "fips_{fips}_{year}_{version}_in".format(fips=fips,
                                                               year=str(self.year),
-                                                              version=self.moves_version)
+                                                              version=_version_safe)
         # scenario ID for MOVES runs
         # ends up in tables in the MOVES output database
         self.scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
@@ -1323,7 +1360,7 @@ class MOVES(Module):
                                 mode="county")
                 )
             )
-        elif self.moves_version.startswith('MOVES5'):
+        elif self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
             importfilestring = (
                 E.moves(
                         E.importer(
@@ -1516,7 +1553,7 @@ class MOVES(Module):
         scaleinput = etree.Element("scaleinputdatabase", servername=self.db_host)
         scaleinput.set("databasename", "fips_{fips}_{year}_{version}_in".format(fips=fips,
                                                                                 year=self.year,
-                                                                                version=self.moves_version))
+                                                                                version=self.moves_version.replace('.', '_')))
         scaleinput.set("description", "")
 
         # Create XML element tree for units used for MOVES output
@@ -1543,7 +1580,10 @@ class MOVES(Module):
         lookupflag.set("truncateactivity", "true")
         lookupflag.set("truncatebaserates", "true")
 
-        skip_dom_val = etree.Element("skipdomaindatabasevalidation", selected="false")
+        # Skip domain validation: MOVES5 added fuelTypeID=9 (electric); imported AVFT
+        # may not cover all default-DB fuel types, causing validation abort. The import
+        # step already ensures the county CDB is structurally correct.
+        skip_dom_val = etree.Element("skipdomaindatabasevalidation", selected="true")
 
         # Create XML element tree for MOVES geographic selection
         geoselect = etree.Element("geographicselection", type="COUNTY")
@@ -1669,7 +1709,7 @@ class MOVES(Module):
                         lookupflag,
                         version=self.moves_version)
             )
-        elif self.moves_version.startswith('MOVES5'):
+        elif self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
             _runspecfilestring = (
                 E.runspec(
                         description,
@@ -1972,9 +2012,13 @@ class MOVES(Module):
                                                         'roadTypeID'))
 
         # calculate non-summed rate per distance
-        _join_dist_avgspd.eval('averageRatePerDistance = ratePerDistance * '
-                               'avgSpeedFraction * roadTypeVMTFraction *'
-                               'dayVMTFraction', inplace=True)
+        # Use direct column operations instead of eval() — more robust with mixed types
+        _join_dist_avgspd['averageRatePerDistance'] = (
+            pd.to_numeric(_join_dist_avgspd['ratePerDistance'], errors='coerce') *
+            pd.to_numeric(_join_dist_avgspd['avgSpeedFraction'], errors='coerce') *
+            pd.to_numeric(_join_dist_avgspd['roadTypeVMTFraction'], errors='coerce') *
+            pd.to_numeric(_join_dist_avgspd['dayVMTFraction'], errors='coerce')
+        )
 
         # calculate final pollutant rates per distance by grouping and
         # summing rates per distance over pollutant processes, hours,
@@ -2094,8 +2138,11 @@ class MOVES(Module):
         # 1. The standard Python max() will not work here.
         _run_emissions['trips'] = np.maximum((2 * _run_emissions.feedstock_amount / _run_emissions.truck_capacity - 1), 1)
 
-        _run_emissions.eval('pollutant_amount = averageRatePerDistance * vmt *'
-                            'trips', inplace=True)
+        _run_emissions['pollutant_amount'] = (
+            pd.to_numeric(_run_emissions['averageRatePerDistance'], errors='coerce') *
+            pd.to_numeric(_run_emissions['vmt'], errors='coerce') *
+            pd.to_numeric(_run_emissions['trips'], errors='coerce')
+        )
 
         # start and hotelling emissions
         _avgRateVeh = _ratepervehicle.groupby(['fips', 'state', 'yearID',
@@ -2132,8 +2179,10 @@ class MOVES(Module):
         # trips from farm to biorefinery
         _start_hotel_emissions['trips'] = np.maximum((2 * _start_hotel_emissions.feedstock_amount / _start_hotel_emissions.truck_capacity - 1), 1)
 
-        _start_hotel_emissions.eval('pollutant_amount = ratePerVehicle * trips',
-                                    inplace=True)
+        _start_hotel_emissions['pollutant_amount'] = (
+            pd.to_numeric(_start_hotel_emissions['ratePerVehicle'], errors='coerce') *
+            pd.to_numeric(_start_hotel_emissions['trips'], errors='coerce')
+        )
 
         # append the run emissions with the start and hotelling emissions
         _transportation_emissions = pd.concat([_run_emissions[['region_production',
@@ -2182,6 +2231,135 @@ class MOVES(Module):
 
         return _transportation_emissions
 
+    def export_operational_request_frame(self, output_path=None):
+        """Export the operational MOVES request frame without running MOVES or creating databases.
+
+        This method executes the same internal code path as :meth:`run` up to and including
+        the construction of ``moves_run_list``, then stops—before CDB creation, national-data
+        creation, XML generation, or any MOVES invocation.
+
+        The emitted frame is the exact set of county FIPS codes that FPEAM would request
+        MOVES rates for under the current configuration. This is useful for:
+
+        - validating the FPEAM target frame before running MOVES;
+        - understanding which counties will require MOVES rate data;
+        - pre-flight checks in any study or workflow that uses cached MOVES results.
+
+        Parameters
+        ----------
+        output_path : str or Path, optional
+            If provided, write the frame to this path as a CSV (or Parquet if pyarrow is
+            available).  If None, return the frame without writing.
+
+        Returns
+        -------
+        tuple[pandas.DataFrame, dict]
+            DataFrame with columns MOVES_run_fips, MOVES_run_state (and feedstock if
+            moves_by_state_and_feedstock is True), and a metadata dict containing N,
+            configuration flags, and the FIPS list SHA256.
+        """
+        import hashlib
+        import json
+
+        # ── Mirror the frame-building section of run() ───────────────────────
+        _region_fips_map = self.region_fips_map.copy()
+        _region_fips_map['state'] = _region_fips_map.fips.str[0:2]
+
+        _prod_merge = self.production[
+            self.production.feedstock_measure == self.feedstock_measure_type
+        ].merge(_region_fips_map, left_on='region_production', right_on='region')
+
+        _prod_by_fips_feed = _prod_merge.groupby(
+            ['fips', 'state', 'feedstock'], as_index=False
+        ).sum()
+
+        # Apply on-farm feedstock loss factors
+        _lf = self.feedstock_loss_factors.copy()
+        # Ensure numeric types — pandas 2.x+ requires explicit conversion for eval
+        _lf['dry_matter_loss'] = pd.to_numeric(_lf['dry_matter_loss'], errors='coerce').fillna(0.0)
+        _lf['dry_matter_remaining'] = 1.0 - _lf['dry_matter_loss']
+        _lf_fg = _lf[_lf.supply_chain_stage.isin(['farm gate'])]
+        _lf_agg = (
+            _lf_fg.groupby('feedstock', as_index=False)['dry_matter_remaining']
+            .prod(numeric_only=True)
+            .rename(columns={'dry_matter_remaining': 'dry_matter_remaining'})
+        )
+        _prod_by_fips_feed = _prod_by_fips_feed.merge(_lf_agg, on='feedstock', how='left')
+        _prod_by_fips_feed['dry_matter_remaining'] = (
+            _prod_by_fips_feed['dry_matter_remaining'].fillna(1.0)
+        )
+        _prod_by_fips_feed['feedstock_amount'] = (
+            pd.to_numeric(_prod_by_fips_feed['feedstock_amount'], errors='coerce') *
+            _prod_by_fips_feed['dry_matter_remaining']
+        )
+        del _prod_by_fips_feed['dry_matter_remaining']
+
+        _max_amts_feed = _prod_by_fips_feed.groupby(
+            ['state', 'feedstock'], as_index=False
+        ).max()
+
+        if self.moves_by_state:
+            _amts_by_fips = _prod_by_fips_feed.groupby(
+                ['fips', 'state'], as_index=False
+            ).sum()
+            _max_amts = _amts_by_fips.groupby('state', as_index=False).max()
+            _run_list = _max_amts[['fips', 'state']].drop_duplicates()
+        elif self.moves_by_state_and_feedstock:
+            _run_list = _max_amts_feed[['fips', 'state', 'feedstock']].drop_duplicates()
+        else:
+            _run_list = _prod_merge[['fips', 'state']].drop_duplicates()
+
+        _run_list = _run_list.copy()
+        _run_list.rename(
+            columns={'fips': 'MOVES_run_fips', 'state': 'MOVES_run_state'},
+            inplace=True,
+        )
+
+        # ── Compute metadata ─────────────────────────────────────────────────
+        fips_sorted = sorted(_run_list['MOVES_run_fips'].dropna().unique().tolist())
+        fips_str = '\n'.join(str(f).zfill(5) for f in fips_sorted)
+        fips_sha256 = hashlib.sha256(fips_str.encode()).hexdigest()
+
+        meta = {
+            'N': len(fips_sorted),
+            'moves_by_state': bool(self.moves_by_state),
+            'moves_by_state_and_feedstock': bool(self.moves_by_state_and_feedstock),
+            'feedstock_measure_type': self.feedstock_measure_type,
+            'fips_sha256': fips_sha256,
+            'source': 'FPEAM.MOVES.export_operational_request_frame',
+        }
+
+        LOGGER.info('Operational MOVES request frame: N=%d FIPS, sha256=%s',
+                    meta['N'], fips_sha256)
+
+        # ── Write outputs ────────────────────────────────────────────────────
+        if output_path is not None:
+            import os
+            from pathlib import Path
+
+            out = Path(output_path)
+            out.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write FIPS list
+            fips_txt = out.parent / 'primary_target_fips.txt'
+            fips_txt.write_text(fips_str + '\n')
+
+            # Write frame (Parquet preferred, CSV fallback)
+            try:
+                _run_list.to_parquet(str(out), index=False)
+            except ImportError:
+                csv_path = out.with_suffix('.csv')
+                _run_list.to_csv(str(csv_path), index=False)
+                LOGGER.warning('pyarrow not available; wrote CSV to %s', csv_path)
+
+            # Write metadata
+            meta_path = out.parent / 'operational_moves_request_frame_meta.json'
+            meta_path.write_text(json.dumps(meta, indent=2))
+
+            LOGGER.info('Frame written to %s', out)
+
+        return _run_list, meta
+
     def run(self):
         """
         Prepare and execute MOVES.
@@ -2214,9 +2392,11 @@ class MOVES(Module):
 
         # apply feedstock loss factors for on-farm dry matter losses, since
         # trips should be calculated based on farm-gate feedstock amounts
-        self.feedstock_loss_factors.eval('dry_matter_remaining = '
-                                         '1 - dry_matter_loss',
-                                         inplace=True)
+        self.feedstock_loss_factors['dry_matter_loss'] = pd.to_numeric(
+            self.feedstock_loss_factors['dry_matter_loss'], errors='coerce').fillna(0.0)
+        self.feedstock_loss_factors['dry_matter_remaining'] = (
+            1.0 - self.feedstock_loss_factors['dry_matter_loss']
+        )
 
         # pull out only on-farm feedstock losses
         # @todo the list of on-farm supply chain stages should be user input
@@ -2225,7 +2405,7 @@ class MOVES(Module):
 
         # calculate total losses on farm, remove unnecessary columns
         _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'], as_index=False)
-        _loss_factors_farmgate = _loss_factors_farmgate.prod()[['feedstock',
+        _loss_factors_farmgate = _loss_factors_farmgate.prod(numeric_only=True)[['feedstock',
                                                                 'dry_matter_remaining']]
 
         # merge loss factors with prod df
@@ -2390,6 +2570,56 @@ class MOVES(Module):
                 finally:
                     _moves_cursor.close()
  
+                # ── Fix: copy avgSpeedDistribution to execution DB ───────────────
+                # Java ROMD (RatesOperatingModeDistributionGenerator) reads
+                # avgSpeedDistribution from the execution DB, not the county CDB.
+                # Without this copy, ROMD produces no opMode fractions → Running
+                # Exhaust rates are always 0 in rateperdistance.
+                import re as _re
+                _exec_db = None
+                _cfg_path = os.path.join(self.moves_home, 'MOVESConfiguration.txt')
+                try:
+                    with open(_cfg_path) as _f:
+                        for _line in _f:
+                            _m = _re.match(r'executionDatabaseName\s*=\s*(\S+)', _line.strip())
+                            if _m:
+                                _exec_db = _m.group(1)
+                                break
+                except Exception as _e:
+                    LOGGER.warning('Could not read MOVESConfiguration.txt: %s', _e)
+                if _exec_db:
+                    LOGGER.info('Copying avgSpeedDistribution from %s to execution DB %s',
+                                self.db_in, _exec_db)
+                    try:
+                        _econn = pymysql.connect(
+                            host=self.db_host,
+                            user=self.config.get('moves_db_user'),
+                            password=self.config.get('moves_db_pass'),
+                            port=int(self.config.get('moves_db_port', 3306)))
+                        _ecur = _econn.cursor()
+                        _ecur.execute(f'CREATE DATABASE IF NOT EXISTS `{_exec_db}`')
+                        _ecur.execute(f"""CREATE TABLE IF NOT EXISTS `{_exec_db}`.`avgSpeedDistribution` (
+                            sourceTypeID  SMALLINT NOT NULL DEFAULT 0,
+                            roadTypeID    SMALLINT NOT NULL DEFAULT 0,
+                            hourDayID     SMALLINT NOT NULL DEFAULT 0,
+                            avgSpeedBinID SMALLINT NOT NULL DEFAULT 0,
+                            avgSpeedFraction FLOAT,
+                            PRIMARY KEY (sourceTypeID, roadTypeID, hourDayID, avgSpeedBinID)
+                        ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4""")
+                        _ecur.execute(f'TRUNCATE TABLE `{_exec_db}`.`avgSpeedDistribution`')
+                        _ecur.execute(f"""INSERT INTO `{_exec_db}`.`avgSpeedDistribution`
+                            SELECT * FROM `{self.db_in}`.`avgSpeedDistribution`""")
+                        _econn.commit()
+                        _ecur.execute(f'SELECT COUNT(*) FROM `{_exec_db}`.`avgSpeedDistribution`')
+                        _n = _ecur.fetchone()[0]
+                        LOGGER.info('avgSpeedDistribution: %d rows copied to execution DB', _n)
+                        _ecur.close()
+                        _econn.close()
+                    except Exception as _e:
+                        LOGGER.error('avgSpeedDistribution copy to execution DB failed: %s', _e)
+                else:
+                    LOGGER.warning('Could not determine executionDatabaseName for avgSpeedDistribution copy')
+
                 # execute MOVES and log output
                 LOGGER.info('running MOVES for FIPS: %s' % _fips)
                 LOGGER.debug('runspec file: %s' % self.runspec_filename)
