@@ -161,34 +161,99 @@ class TestRegionKeyedFactors:
         assert len(rows_a) == 1
 
 
-class TestDynamicProviderNotYetWired:
+def _make_ef_with_provider(config, equip, prod, provider, dist_csv=_DISTRIBUTION_CSV,
+                            geophysical_context_csv=None):
+    """Construct EmissionFactors with a dynamic provider via temporary files."""
+    import tempfile, os
+    from configobj import ConfigObj
 
-    def test_ammonia_fertilizer_provider_config_raises_not_implemented(self, ef_config):
-        """Configuring provider=ammonia_fertilizer must raise NotImplementedError
-        until the geophysical context → get_emissions() wiring is complete."""
-        import tempfile, os
-        from configobj import ConfigObj
-        cfg = ConfigObj(ef_config)
-        cfg['provider'] = 'ammonia_fertilizer'
+    cfg = ConfigObj(config)
+    cfg['provider'] = provider
 
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_ef:
+        f_ef.write(_NATIONAL_FACTORS_CSV)
+        ef_path = f_ef.name
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_rd:
+        f_rd.write(dist_csv)
+        rd_path = f_rd.name
+    cfg['emission_factors'] = ef_path
+    cfg['resource_distribution'] = rd_path
+
+    ctx_path = None
+    if geophysical_context_csv is not None:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_ctx:
+            f_ctx.write(geophysical_context_csv)
+            ctx_path = f_ctx.name
+        cfg['geophysical_context'] = ctx_path
+
+    try:
+        ef = EmissionFactors(config=cfg, equipment=equip, production=prod)
+        ef.run()
+        return ef
+    finally:
+        os.unlink(ef_path)
+        os.unlink(rd_path)
+        if ctx_path:
+            os.unlink(ctx_path)
+
+
+# Geophysical context: REGION_A is hot/dry (high volatilization); REGION_B is at
+# reference conditions (T=15C, wind=2 m/s, precip=0mm, loam).
+_GEOPHYSICAL_CONTEXT_CSV = """\
+region,temperature_c,wind_speed_m_s,precipitation_mm,soil_type
+REGION_A,30.0,3.0,0.0,clay
+REGION_B,15.0,2.0,0.0,loam
+"""
+
+# resource_distribution using an ammonia-relevant subtype (anhydrous ammonia is
+# handled by AmmoniaFertilizerProvider; the static _NATIONAL_FACTORS_CSV above is
+# irrelevant to this provider but must still be a valid file for EmissionFactors.__init__).
+_AMMONIA_DISTRIBUTION_CSV = """\
+feedstock,resource,resource_subtype,distribution
+corn grain,nitrogen,anhydrous ammonia,1.0
+"""
+
+
+class TestDynamicProviderWiring:
+    """Ammonia-fertilizer dynamic provider wired end-to-end through EmissionFactors."""
+
+    def test_ammonia_fertilizer_provider_runs_without_error(self, ef_config):
+        """Configuring provider=ammonia_fertilizer no longer raises NotImplementedError."""
         equip = _equipment()
         prod = _production_two_regions()
+        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
+                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+                                     geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV)
+        assert ef.status == 'complete'
+        assert len(ef.results) > 0
+        assert (ef.results['pollutant'] == 'nh3').all()
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-            f.write(_NATIONAL_FACTORS_CSV)
-            ef_path = f.name
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-            f.write(_DISTRIBUTION_CSV)
-            rd_path = f.name
-        cfg['emission_factors'] = ef_path
-        cfg['resource_distribution'] = rd_path
+    def test_hotter_drier_region_has_higher_rate(self, ef_config):
+        """REGION_A (hot/dry/clay) must show higher per-unit NH3 emissions than
+        REGION_B (reference conditions) for identical feedstock_amount."""
+        equip = _equipment()
+        prod = _production_two_regions()
+        prod.loc[:, 'feedstock_amount'] = 100.0  # equalize so only climate differs
+        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
+                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+                                     geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV)
+        amount_a = ef.results[ef.results['region_production'] == 'REGION_A']['pollutant_amount'].sum()
+        amount_b = ef.results[ef.results['region_production'] == 'REGION_B']['pollutant_amount'].sum()
+        assert amount_a > amount_b
 
-        try:
-            with pytest.raises(NotImplementedError):
-                EmissionFactors(config=cfg, equipment=equip, production=prod)
-        finally:
-            os.unlink(ef_path)
-            os.unlink(rd_path)
+    def test_missing_geophysical_context_uses_neutral_defaults(self, ef_config):
+        """No geophysical_context configured: provider still runs, using reference
+        (neutral) climate defaults for every region."""
+        equip = _equipment()
+        prod = _production_two_regions()
+        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
+                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+                                     geophysical_context_csv=None)
+        assert ef.status == 'complete'
+        assert len(ef.results) > 0
+        # anhydrous ammonia base rate is 0.04 at reference conditions
+        results_a = ef.results[ef.results['region_production'] == 'REGION_A']['pollutant_amount'].sum()
+        assert abs(results_a - 100.0 * 1.0 * 0.04) < 1e-6
 
 
 class TestRegionFallbackPerResource:

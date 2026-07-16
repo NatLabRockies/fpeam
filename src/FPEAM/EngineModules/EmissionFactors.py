@@ -115,14 +115,11 @@ class EmissionFactors(Module):
             else:
                 self._provider = _provider_cls(params=_params_path if _params_path else None)
                 LOGGER.info('EmissionFactors using dynamic provider: %s', _provider_name)
-                raise NotImplementedError(
-                    'Dynamic provider "%s" is configured but the provider → '
-                    'get_emissions() wiring is not yet complete.  '
-                    'The geophysical context must be joined onto the '
-                    'production×equipment records before passing to '
-                    'provider.factors().  Remove this error when that wiring '
-                    'is implemented.' % _provider_name
-                )
+                if self._geophysical_context is None:
+                    LOGGER.warning(
+                        'Dynamic provider "%s" configured without a geophysical_context; '
+                        'all regions will use neutral reference-condition climate '
+                        'defaults.', _provider_name)
 
     def get_emissions(self):
         """
@@ -144,7 +141,9 @@ class EmissionFactors(Module):
         _base = (self.production[_prod_rows][_prod_columns]
                  .merge(self.equipment[_equip_columns], on=_idx, suffixes=['_prod', '_equip']))
 
-        if self._has_region_factors:
+        if not isinstance(self._provider, TableProvider):
+            _df = self._get_dynamic_factors(_base)
+        elif self._has_region_factors:
             _regional_cols = _factors_columns + ['region']
 
             # rows with a non-null region value
@@ -197,6 +196,62 @@ class EmissionFactors(Module):
                    'resource_subtype', 'pollutant', 'pollutant_amount']]
 
         return _df
+
+    # Reference (neutral) climate defaults — must match AmmoniaFertilizerProvider's
+    # documented reference conditions so missing/uncovered regions behave identically
+    # to "no context supplied".
+    _GEOPHYSICAL_DEFAULTS = {
+        'temperature_c': 15.0,
+        'wind_speed_m_s': 2.0,
+        'precipitation_mm': 0.0,
+        'soil_type': 'loam',
+    }
+
+    def _get_dynamic_factors(self, base):
+        """Build provider input records (region × resource_subtype × geophysical
+        context) and return a production×equipment×rate frame with an
+        ``overall_rate`` column, in the same shape the static-table branches
+        of :meth:`get_emissions` produce.
+
+        :param base: [DataFrame] production × equipment merged frame
+        :return: [DataFrame] base rows joined to dynamic provider rates
+        """
+        _regions = pd.DataFrame({'region': base['region_production'].unique()})
+
+        # resource_distribution rows relevant to feedstocks present in this run
+        _dist = self.resource_distribution[
+            self.resource_distribution['feedstock'].isin(base['feedstock'].unique())
+        ]
+
+        _records = _dist.merge(_regions, how='cross')
+
+        if self._geophysical_context is not None:
+            _records = _records.merge(self._geophysical_context, on='region', how='left')
+
+        # Fill missing/uncovered-region climate columns with neutral reference
+        # defaults so results are identical to "no context supplied" for those rows.
+        for _col, _default in self._GEOPHYSICAL_DEFAULTS.items():
+            if _col in _records.columns:
+                _records[_col] = _records[_col].fillna(_default)
+            else:
+                _records[_col] = _default
+
+        _rates = self._provider.factors(_records)
+        _rates = _rates.merge(
+            _records[['feedstock', 'region', 'resource', 'resource_subtype', 'distribution']],
+            on=['region', 'resource', 'resource_subtype'],
+        )
+        _rates = _rates.assign(overall_rate=_rates['rate'] * _rates['distribution'])
+
+        _factors_columns = ['feedstock', 'activity', 'resource', 'resource_subtype',
+                            'overall_rate', 'pollutant', 'region']
+
+        _df = base.merge(
+            _rates[_factors_columns],
+            left_on=['feedstock', 'resource', 'region_production'],
+            right_on=['feedstock', 'resource', 'region'],
+        )
+        return _df.drop(columns=['region'])
 
     def run(self):
         """Execute all calculations."""
