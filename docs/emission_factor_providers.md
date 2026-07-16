@@ -17,6 +17,15 @@ EmissionFactors module
 Providers are selected per-module via the `provider` key in the
 `[emissionfactors]` section of your config.
 
+**Status**: dynamic-provider wiring into `EngineModules.EmissionFactors` is
+complete and unit-tested (`tests/unit_tests/test_region_emission_factors.py::TestDynamicProviderWiring`).
+Setting `provider = ammonia_fertilizer` (or any other `EmissionFactorProvider`
+subclass) now runs through the standard `EmissionFactors.run()` path end to
+end — records are joined against `resource_distribution` and
+`geophysical_context`, missing climate context falls back to neutral
+Bouwman-reference defaults, and the provider's output is merged into the
+same emissions-calculation flow the static `table` provider already uses.
+
 ---
 
 ## Provider interface
