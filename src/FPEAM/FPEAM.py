@@ -227,12 +227,12 @@ class FPEAM(object):
         # pandas 2.x TypeError on string columns
         _loss_factors = _loss_factors[['feedstock', 'dry_matter_remaining']]\
             .groupby(['feedstock'], as_index=False)\
-            .prod()[['feedstock', 'dry_matter_remaining']]
+            .prod(numeric_only=True)[['feedstock', 'dry_matter_remaining']]
 
         # calculate total remaining fraction at farm gate
         _loss_factors_farmgate = _loss_factors_farmgate[['feedstock', 'dry_matter_remaining']]\
             .groupby(['feedstock'], as_index=False)\
-            .prod()[['feedstock', 'dry_matter_remaining']]
+            .prod(numeric_only=True)[['feedstock', 'dry_matter_remaining']]
 
         # subset the feedstock production df by which feedstock measures
         # will be used in normalizing pollutant amounts

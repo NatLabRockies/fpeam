@@ -18,4 +18,4 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: pixi run env PYTHONPATH=src python -m pytest tests/ -v
+        run: bash test_repo.sh --ci
