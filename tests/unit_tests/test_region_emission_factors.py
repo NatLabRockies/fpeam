@@ -6,49 +6,81 @@ Covers:
 - Unknown regions fall back to national defaults.
 - Mixed CSVs (some regions, some national) work correctly.
 """
-import io
+
 import pytest
 import pandas as pd
 
 from FPEAM.EngineModules import EmissionFactors
-from FPEAM.Data import Equipment, Production, EmissionFactor, ResourceDistribution
+from FPEAM.Data import Equipment, Production
 from FPEAM.IO import load_configs, _resource_path, CONFIG_FOLDER
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def ef_config():
-    return load_configs(_resource_path('%s/run_config.ini' % CONFIG_FOLDER))
+    return load_configs(_resource_path("%s/run_config.ini" % CONFIG_FOLDER))
 
 
 def _equipment():
-    return Equipment(df=pd.DataFrame([{
-        'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-        'equipment_group': 'grp1', 'rotation_year': 1,
-        'activity': 'chemical application', 'equipment_name': 'tractor',
-        'equipment_horsepower': 100.0, 'resource': 'nitrogen', 'rate': 1.0,
-        'unit_numerator': 'lb', 'unit_denominator': 'ac',
-    }]), backfill=False)
+    return Equipment(
+        df=pd.DataFrame(
+            [
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "equipment_group": "grp1",
+                    "rotation_year": 1,
+                    "activity": "chemical application",
+                    "equipment_name": "tractor",
+                    "equipment_horsepower": 100.0,
+                    "resource": "nitrogen",
+                    "rate": 1.0,
+                    "unit_numerator": "lb",
+                    "unit_denominator": "ac",
+                }
+            ]
+        ),
+        backfill=False,
+    )
 
 
 def _production_two_regions():
-    return Production(df=pd.DataFrame([
-        {
-            'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-            'region_production': 'REGION_A', 'region_destination': 'REGION_A',
-            'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
-            'feedstock_amount': 100.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
-            'source_lon': -87.6, 'source_lat': 41.8,
-            'destination_lon': -87.6, 'destination_lat': 41.8,
-        },
-        {
-            'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-            'region_production': 'REGION_B', 'region_destination': 'REGION_B',
-            'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
-            'feedstock_amount': 200.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
-            'source_lon': -95.0, 'source_lat': 40.0,
-            'destination_lon': -95.0, 'destination_lat': 40.0,
-        },
-    ]), backfill=False)
+    return Production(
+        df=pd.DataFrame(
+            [
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "region_production": "REGION_A",
+                    "region_destination": "REGION_A",
+                    "equipment_group": "grp1",
+                    "feedstock_measure": "harvested",
+                    "feedstock_amount": 100.0,
+                    "unit_numerator": "dt",
+                    "unit_denominator": "ac",
+                    "source_lon": -87.6,
+                    "source_lat": 41.8,
+                    "destination_lon": -87.6,
+                    "destination_lat": 41.8,
+                },
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "region_production": "REGION_B",
+                    "region_destination": "REGION_B",
+                    "equipment_group": "grp1",
+                    "feedstock_measure": "harvested",
+                    "feedstock_amount": 200.0,
+                    "unit_numerator": "dt",
+                    "unit_denominator": "ac",
+                    "source_lon": -95.0,
+                    "source_lat": 40.0,
+                    "destination_lon": -95.0,
+                    "destination_lat": 40.0,
+                },
+            ]
+        ),
+        backfill=False,
+    )
 
 
 # Minimal factors CSV content (national, no region column)
@@ -72,20 +104,22 @@ corn grain,nitrogen,anhydrous ammonia,1.0
 
 def _make_ef_from_csv(config, equip, prod, factors_csv, dist_csv=_DISTRIBUTION_CSV):
     """Construct EmissionFactors from in-memory CSV strings via temporary files."""
-    import tempfile, os
+    import tempfile
+    import os
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_ef:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f_ef:
         f_ef.write(factors_csv)
         ef_path = f_ef.name
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_rd:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f_rd:
         f_rd.write(dist_csv)
         rd_path = f_rd.name
 
     # Patch config to point at temp files
     from configobj import ConfigObj
+
     cfg = ConfigObj(config)
-    cfg['emission_factors'] = ef_path
-    cfg['resource_distribution'] = rd_path
+    cfg["emission_factors"] = ef_path
+    cfg["resource_distribution"] = rd_path
 
     try:
         ef = EmissionFactors(config=cfg, equipment=equip, production=prod)
@@ -97,23 +131,21 @@ def _make_ef_from_csv(config, equip, prod, factors_csv, dist_csv=_DISTRIBUTION_C
 
 
 class TestNationalOnlyFactors:
-
     def test_national_regression(self, ef_config):
         """National-only CSV: behavior identical to pre-region implementation."""
         equip = _equipment()
         prod = _production_two_regions()
         ef = _make_ef_from_csv(ef_config, equip, prod, _NATIONAL_FACTORS_CSV)
-        assert ef.status == 'complete'
+        assert ef.status == "complete"
         # Both regions get the same national rate (0.04 lb/lb × 1 lb/unit × feedstock)
         assert len(ef.results) > 0
         assert not ef._has_region_factors
-        results_by_region = ef.results.groupby('region_production')['pollutant_amount'].sum()
+        results_by_region = ef.results.groupby("region_production")["pollutant_amount"].sum()
         # region B has 2× the feedstock amount so 2× the emissions
-        assert abs(results_by_region['REGION_B'] / results_by_region['REGION_A'] - 2.0) < 1e-9
+        assert abs(results_by_region["REGION_B"] / results_by_region["REGION_A"] - 2.0) < 1e-9
 
 
 class TestRegionKeyedFactors:
-
     def test_region_flag_detected(self, ef_config):
         """EmissionFactors detects region column in factors CSV."""
         equip = _equipment()
@@ -126,8 +158,10 @@ class TestRegionKeyedFactors:
         equip = _equipment()
         prod = _production_two_regions()
         ef = _make_ef_from_csv(ef_config, equip, prod, _REGIONAL_FACTORS_CSV)
-        assert ef.status == 'complete'
-        results_a = ef.results[ef.results['region_production'] == 'REGION_A']['pollutant_amount'].sum()
+        assert ef.status == "complete"
+        results_a = ef.results[ef.results["region_production"] == "REGION_A"][
+            "pollutant_amount"
+        ].sum()
         # REGION_A: 100 feedstock × 1 lb/unit × 0.10 rate
         assert abs(results_a - 10.0) < 1e-9
 
@@ -136,7 +170,9 @@ class TestRegionKeyedFactors:
         equip = _equipment()
         prod = _production_two_regions()
         ef = _make_ef_from_csv(ef_config, equip, prod, _REGIONAL_FACTORS_CSV)
-        results_b = ef.results[ef.results['region_production'] == 'REGION_B']['pollutant_amount'].sum()
+        results_b = ef.results[ef.results["region_production"] == "REGION_B"][
+            "pollutant_amount"
+        ].sum()
         # REGION_B: 200 feedstock × 1 lb/unit × 0.04 rate
         assert abs(results_b - 8.0) < 1e-9
 
@@ -145,46 +181,57 @@ class TestRegionKeyedFactors:
         equip = _equipment()
         prod = _production_two_regions()
         ef = _make_ef_from_csv(ef_config, equip, prod, _REGIONAL_FACTORS_CSV)
-        required = {'region_production', 'region_destination', 'feedstock',
-                    'tillage_type', 'module', 'activity', 'resource',
-                    'resource_subtype', 'pollutant', 'pollutant_amount'}
+        required = {
+            "region_production",
+            "region_destination",
+            "feedstock",
+            "tillage_type",
+            "module",
+            "activity",
+            "resource",
+            "resource_subtype",
+            "pollutant",
+            "pollutant_amount",
+        }
         assert required.issubset(set(ef.results.columns))
-        assert 'region' not in ef.results.columns  # internal column must not leak out
+        assert "region" not in ef.results.columns  # internal column must not leak out
 
     def test_no_duplicate_rows_for_region_a(self, ef_config):
         """Region A should not also appear with the national rate."""
         equip = _equipment()
         prod = _production_two_regions()
         ef = _make_ef_from_csv(ef_config, equip, prod, _REGIONAL_FACTORS_CSV)
-        rows_a = ef.results[ef.results['region_production'] == 'REGION_A']
+        rows_a = ef.results[ef.results["region_production"] == "REGION_A"]
         # With one feedstock measure row and one resource/subtype there should be exactly one result row
         assert len(rows_a) == 1
 
 
-def _make_ef_with_provider(config, equip, prod, provider, dist_csv=_DISTRIBUTION_CSV,
-                            geophysical_context_csv=None):
+def _make_ef_with_provider(
+    config, equip, prod, provider, dist_csv=_DISTRIBUTION_CSV, geophysical_context_csv=None
+):
     """Construct EmissionFactors with a dynamic provider via temporary files."""
-    import tempfile, os
+    import tempfile
+    import os
     from configobj import ConfigObj
 
     cfg = ConfigObj(config)
-    cfg['provider'] = provider
+    cfg["provider"] = provider
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_ef:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f_ef:
         f_ef.write(_NATIONAL_FACTORS_CSV)
         ef_path = f_ef.name
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_rd:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f_rd:
         f_rd.write(dist_csv)
         rd_path = f_rd.name
-    cfg['emission_factors'] = ef_path
-    cfg['resource_distribution'] = rd_path
+    cfg["emission_factors"] = ef_path
+    cfg["resource_distribution"] = rd_path
 
     ctx_path = None
     if geophysical_context_csv is not None:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f_ctx:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f_ctx:
             f_ctx.write(geophysical_context_csv)
             ctx_path = f_ctx.name
-        cfg['geophysical_context'] = ctx_path
+        cfg["geophysical_context"] = ctx_path
 
     try:
         ef = EmissionFactors(config=cfg, equipment=equip, production=prod)
@@ -221,24 +268,38 @@ class TestDynamicProviderWiring:
         """Configuring provider=ammonia_fertilizer no longer raises NotImplementedError."""
         equip = _equipment()
         prod = _production_two_regions()
-        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
-                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
-                                     geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV)
-        assert ef.status == 'complete'
+        ef = _make_ef_with_provider(
+            ef_config,
+            equip,
+            prod,
+            "ammonia_fertilizer",
+            dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+            geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV,
+        )
+        assert ef.status == "complete"
         assert len(ef.results) > 0
-        assert (ef.results['pollutant'] == 'nh3').all()
+        assert (ef.results["pollutant"] == "nh3").all()
 
     def test_hotter_drier_region_has_higher_rate(self, ef_config):
         """REGION_A (hot/dry/clay) must show higher per-unit NH3 emissions than
         REGION_B (reference conditions) for identical feedstock_amount."""
         equip = _equipment()
         prod = _production_two_regions()
-        prod.loc[:, 'feedstock_amount'] = 100.0  # equalize so only climate differs
-        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
-                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
-                                     geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV)
-        amount_a = ef.results[ef.results['region_production'] == 'REGION_A']['pollutant_amount'].sum()
-        amount_b = ef.results[ef.results['region_production'] == 'REGION_B']['pollutant_amount'].sum()
+        prod.loc[:, "feedstock_amount"] = 100.0  # equalize so only climate differs
+        ef = _make_ef_with_provider(
+            ef_config,
+            equip,
+            prod,
+            "ammonia_fertilizer",
+            dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+            geophysical_context_csv=_GEOPHYSICAL_CONTEXT_CSV,
+        )
+        amount_a = ef.results[ef.results["region_production"] == "REGION_A"][
+            "pollutant_amount"
+        ].sum()
+        amount_b = ef.results[ef.results["region_production"] == "REGION_B"][
+            "pollutant_amount"
+        ].sum()
         assert amount_a > amount_b
 
     def test_missing_geophysical_context_uses_neutral_defaults(self, ef_config):
@@ -246,13 +307,20 @@ class TestDynamicProviderWiring:
         (neutral) climate defaults for every region."""
         equip = _equipment()
         prod = _production_two_regions()
-        ef = _make_ef_with_provider(ef_config, equip, prod, 'ammonia_fertilizer',
-                                     dist_csv=_AMMONIA_DISTRIBUTION_CSV,
-                                     geophysical_context_csv=None)
-        assert ef.status == 'complete'
+        ef = _make_ef_with_provider(
+            ef_config,
+            equip,
+            prod,
+            "ammonia_fertilizer",
+            dist_csv=_AMMONIA_DISTRIBUTION_CSV,
+            geophysical_context_csv=None,
+        )
+        assert ef.status == "complete"
         assert len(ef.results) > 0
         # anhydrous ammonia base rate is 0.04 at reference conditions
-        results_a = ef.results[ef.results['region_production'] == 'REGION_A']['pollutant_amount'].sum()
+        results_a = ef.results[ef.results["region_production"] == "REGION_A"][
+            "pollutant_amount"
+        ].sum()
         assert abs(results_a - 100.0 * 1.0 * 0.04) < 1e-6
 
 
@@ -266,58 +334,101 @@ class TestRegionFallbackPerResource:
     def test_region_override_does_not_suppress_other_resources(self, ef_config):
         """REGION_A gets nitrogen override AND national herbicide.
         REGION_B (no override) gets national nitrogen AND national herbicide."""
-        import tempfile, os
+        import tempfile
+        import os
 
         factors_csv = (
-            'resource,resource_subtype,activity,pollutant,rate,unit_numerator,unit_denominator,region\n'
-            'nitrogen,anhydrous ammonia,chemical application,nh3,0.04,pound,pound,\n'
-            'nitrogen,anhydrous ammonia,chemical application,nh3,0.10,pound,pound,REGION_A\n'
-            'herbicide,generic herbicide,chemical application,voc,0.75,pound,pound,\n'
+            "resource,resource_subtype,activity,pollutant,rate,unit_numerator,unit_denominator,region\n"
+            "nitrogen,anhydrous ammonia,chemical application,nh3,0.04,pound,pound,\n"
+            "nitrogen,anhydrous ammonia,chemical application,nh3,0.10,pound,pound,REGION_A\n"
+            "herbicide,generic herbicide,chemical application,voc,0.75,pound,pound,\n"
         )
         dist_csv = (
-            'feedstock,resource,resource_subtype,distribution\n'
-            'corn grain,nitrogen,anhydrous ammonia,1.0\n'
-            'corn grain,herbicide,generic herbicide,1.0\n'
+            "feedstock,resource,resource_subtype,distribution\n"
+            "corn grain,nitrogen,anhydrous ammonia,1.0\n"
+            "corn grain,herbicide,generic herbicide,1.0\n"
         )
 
-        equip_df = pd.DataFrame([
-            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-             'equipment_group': 'grp1', 'rotation_year': 1,
-             'activity': 'chemical application', 'equipment_name': 'tractor',
-             'equipment_horsepower': 100.0, 'resource': 'nitrogen', 'rate': 1.0,
-             'unit_numerator': 'lb', 'unit_denominator': 'ac'},
-            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-             'equipment_group': 'grp1', 'rotation_year': 1,
-             'activity': 'chemical application', 'equipment_name': 'sprayer',
-             'equipment_horsepower': 50.0, 'resource': 'herbicide', 'rate': 1.0,
-             'unit_numerator': 'lb', 'unit_denominator': 'ac'},
-        ])
-        prod_df = pd.DataFrame([
-            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-             'region_production': 'REGION_A', 'region_destination': 'REGION_A',
-             'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
-             'feedstock_amount': 100.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
-             'source_lon': -87.6, 'source_lat': 41.8,
-             'destination_lon': -87.6, 'destination_lat': 41.8},
-            {'feedstock': 'corn grain', 'tillage_type': 'conventional tillage',
-             'region_production': 'REGION_B', 'region_destination': 'REGION_B',
-             'equipment_group': 'grp1', 'feedstock_measure': 'harvested',
-             'feedstock_amount': 200.0, 'unit_numerator': 'dt', 'unit_denominator': 'ac',
-             'source_lon': -95.0, 'source_lat': 40.0,
-             'destination_lon': -95.0, 'destination_lat': 40.0},
-        ])
+        equip_df = pd.DataFrame(
+            [
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "equipment_group": "grp1",
+                    "rotation_year": 1,
+                    "activity": "chemical application",
+                    "equipment_name": "tractor",
+                    "equipment_horsepower": 100.0,
+                    "resource": "nitrogen",
+                    "rate": 1.0,
+                    "unit_numerator": "lb",
+                    "unit_denominator": "ac",
+                },
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "equipment_group": "grp1",
+                    "rotation_year": 1,
+                    "activity": "chemical application",
+                    "equipment_name": "sprayer",
+                    "equipment_horsepower": 50.0,
+                    "resource": "herbicide",
+                    "rate": 1.0,
+                    "unit_numerator": "lb",
+                    "unit_denominator": "ac",
+                },
+            ]
+        )
+        prod_df = pd.DataFrame(
+            [
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "region_production": "REGION_A",
+                    "region_destination": "REGION_A",
+                    "equipment_group": "grp1",
+                    "feedstock_measure": "harvested",
+                    "feedstock_amount": 100.0,
+                    "unit_numerator": "dt",
+                    "unit_denominator": "ac",
+                    "source_lon": -87.6,
+                    "source_lat": 41.8,
+                    "destination_lon": -87.6,
+                    "destination_lat": 41.8,
+                },
+                {
+                    "feedstock": "corn grain",
+                    "tillage_type": "conventional tillage",
+                    "region_production": "REGION_B",
+                    "region_destination": "REGION_B",
+                    "equipment_group": "grp1",
+                    "feedstock_measure": "harvested",
+                    "feedstock_amount": 200.0,
+                    "unit_numerator": "dt",
+                    "unit_denominator": "ac",
+                    "source_lon": -95.0,
+                    "source_lat": 40.0,
+                    "destination_lon": -95.0,
+                    "destination_lat": 40.0,
+                },
+            ]
+        )
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-            f.write(factors_csv); ef_path = f.name
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-            f.write(dist_csv); rd_path = f.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write(factors_csv)
+            ef_path = f.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write(dist_csv)
+            rd_path = f.name
 
         from configobj import ConfigObj
+
         cfg = ConfigObj(ef_config)
-        cfg['emission_factors'] = ef_path
-        cfg['resource_distribution'] = rd_path
+        cfg["emission_factors"] = ef_path
+        cfg["resource_distribution"] = rd_path
 
         from FPEAM.Data import Equipment, Production
+
         equip = Equipment(df=equip_df, backfill=False)
         prod = Production(df=prod_df, backfill=False)
 
@@ -325,19 +436,21 @@ class TestRegionFallbackPerResource:
             ef = EmissionFactors(config=cfg, equipment=equip, production=prod)
             ef.run()
         finally:
-            os.unlink(ef_path); os.unlink(rd_path)
+            os.unlink(ef_path)
+            os.unlink(rd_path)
 
         # REGION_A must have BOTH nitrogen (regional rate=0.10) AND herbicide (national rate=0.75)
-        ra = ef.results[ef.results['region_production'] == 'REGION_A']
-        assert 'nitrogen' in ra['resource'].values, 'REGION_A missing nitrogen results'
-        assert 'herbicide' in ra['resource'].values, \
-            'REGION_A missing herbicide results — region-only fallback bug'
+        ra = ef.results[ef.results["region_production"] == "REGION_A"]
+        assert "nitrogen" in ra["resource"].values, "REGION_A missing nitrogen results"
+        assert "herbicide" in ra["resource"].values, (
+            "REGION_A missing herbicide results — region-only fallback bug"
+        )
 
         # REGION_A nitrogen gets the regional rate (0.10, not national 0.04)
-        ra_n = ra[ra['resource'] == 'nitrogen']['pollutant_amount'].sum()
-        assert abs(ra_n - 10.0) < 1e-9, f'Expected REGION_A NH3=10.0, got {ra_n}'
+        ra_n = ra[ra["resource"] == "nitrogen"]["pollutant_amount"].sum()
+        assert abs(ra_n - 10.0) < 1e-9, f"Expected REGION_A NH3=10.0, got {ra_n}"
 
         # REGION_B must have both
-        rb = ef.results[ef.results['region_production'] == 'REGION_B']
-        assert 'nitrogen' in rb['resource'].values
-        assert 'herbicide' in rb['resource'].values
+        rb = ef.results[ef.results["region_production"] == "REGION_B"]
+        assert "nitrogen" in rb["resource"].values
+        assert "herbicide" in rb["resource"].values

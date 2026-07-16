@@ -26,4 +26,4 @@ from .base import EmissionFactorProvider
 from .table import TableProvider
 from .ammonia import AmmoniaFertilizerProvider
 
-__all__ = ['EmissionFactorProvider', 'TableProvider', 'AmmoniaFertilizerProvider']
+__all__ = ["EmissionFactorProvider", "TableProvider", "AmmoniaFertilizerProvider"]

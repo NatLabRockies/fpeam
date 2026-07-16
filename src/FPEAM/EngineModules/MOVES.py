@@ -10,25 +10,27 @@ from lxml.builder import E
 
 from FPEAM import utils
 from .Module import Module
-from ..Data import (RegionFipsMap, TruckCapacity)
+from ..Data import RegionFipsMap
 
 
 LOGGER = utils.logger(name=__name__)
 
-_IS_WINDOWS = platform.system() == 'Windows'
+_IS_WINDOWS = platform.system() == "Windows"
+
 
 # Cache Homebrew prefix at import time (Linux/macOS only) so we avoid
 # shelling out to `brew` on every MOVES county run.
 def _get_homebrew_prefix():
-    _env = os.environ.get('HOMEBREW_PREFIX')
+    _env = os.environ.get("HOMEBREW_PREFIX")
     if _env:
         return _env
     if not _IS_WINDOWS:
         try:
-            return subprocess.check_output(['brew', '--prefix'], text=True).strip()
+            return subprocess.check_output(["brew", "--prefix"], text=True).strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
-    return ''
+    return ""
+
 
 _HOMEBREW_PREFIX = _get_homebrew_prefix()
 
@@ -39,44 +41,44 @@ def _build_macos_classpath(moves_home):
     Mirrors the <path id="classpath"> in build.xml but uses ':'
     as the path separator and forward-slash paths.
     """
-    sep = ':'
+    sep = ":"
     entries = [
-        '.',
-        'libs/ant-contrib-1.0b3.jar',
-        'libs/commons-io-2.11.0.jar',
-        'libs/commons-lang-2.2.jar',
-        'libs/dom.jar',
-        'libs/jai_codec.jar',
-        'libs/jai_core.jar',
-        'libs/jakarta-regexp-1.3.jar',
-        'libs/jaxp-api.jar',
-        'libs/jlfgr-1_0.jar',
-        'libs/jna-jpms-5.15.0.jar',
-        'libs/jna-platform-jpms-5.15.0.jar',
-        'libs/junit-4.5.jar',
-        'libs/mysql-connector-java-5.1.17-bin.jar',
-        'libs/sax.jar',
-        'libs/xercesImpl.jar',
-        'libs/xml-apis.jar',
-        'libs/abbot/abbot.jar',
-        'libs/abbot/costello.jar',
-        'libs/poi/commons-codec-1.5.jar',
-        'libs/poi/commons-logging-1.1.jar',
-        'libs/poi/dom4j-1.6.1.jar',
-        'libs/poi/jsr173_1.0_api.jar',
-        'libs/poi/ooxml-schemas-1.0.jar',
-        'libs/poi/poi-3.9-20121203.jar',
-        'libs/poi/poi-ooxml-3.9-20121203.jar',
-        'libs/poi/stax-api-1.0.1.jar',
-        'libs/poi/xmlbeans-2.3.0.jar',
-        'amazon/libs/aws-java-sdk-1.1.4.jar',
-        'amazon/libs/commons-codec-1.3.jar',
-        'amazon/libs/commons-httpclient-3.0.1.jar',
-        'amazon/libs/commons-logging-1.1.1.jar',
-        'amazon/libs/jackson-core-asl-1.4.3.jar',
-        'amazon/libs/mail-1.4.3.jar',
-        'amazon/libs/stax-1.2.0.jar',
-        'amazon/libs/stax-api-1.0.1.jar',
+        ".",
+        "libs/ant-contrib-1.0b3.jar",
+        "libs/commons-io-2.11.0.jar",
+        "libs/commons-lang-2.2.jar",
+        "libs/dom.jar",
+        "libs/jai_codec.jar",
+        "libs/jai_core.jar",
+        "libs/jakarta-regexp-1.3.jar",
+        "libs/jaxp-api.jar",
+        "libs/jlfgr-1_0.jar",
+        "libs/jna-jpms-5.15.0.jar",
+        "libs/jna-platform-jpms-5.15.0.jar",
+        "libs/junit-4.5.jar",
+        "libs/mysql-connector-java-5.1.17-bin.jar",
+        "libs/sax.jar",
+        "libs/xercesImpl.jar",
+        "libs/xml-apis.jar",
+        "libs/abbot/abbot.jar",
+        "libs/abbot/costello.jar",
+        "libs/poi/commons-codec-1.5.jar",
+        "libs/poi/commons-logging-1.1.jar",
+        "libs/poi/dom4j-1.6.1.jar",
+        "libs/poi/jsr173_1.0_api.jar",
+        "libs/poi/ooxml-schemas-1.0.jar",
+        "libs/poi/poi-3.9-20121203.jar",
+        "libs/poi/poi-ooxml-3.9-20121203.jar",
+        "libs/poi/stax-api-1.0.1.jar",
+        "libs/poi/xmlbeans-2.3.0.jar",
+        "amazon/libs/aws-java-sdk-1.1.4.jar",
+        "amazon/libs/commons-codec-1.3.jar",
+        "amazon/libs/commons-httpclient-3.0.1.jar",
+        "amazon/libs/commons-logging-1.1.1.jar",
+        "amazon/libs/jackson-core-asl-1.4.3.jar",
+        "amazon/libs/mail-1.4.3.jar",
+        "amazon/libs/stax-1.2.0.jar",
+        "amazon/libs/stax-api-1.0.1.jar",
     ]
     return sep.join(os.path.join(moves_home, e) for e in entries)
 
@@ -107,12 +109,12 @@ def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=14400):
         # Both import (-i) and run (-r) use the same classpath string; the
         # flag and file differ.
         cmd = (
-            r'cd {path} & setenv.bat & '
-            r'java -Xmx512M '
+            r"cd {path} & setenv.bat & "
+            r"java -Xmx512M "
             r'-cp "jre\bin;ant\bin;libs;libs\poi;libs\poi\commons-codec-1.5.jar;'
-            r'libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;'
+            r"libs\commons-lang-2.2.jar;libs\commons-io-2.11.0.jar;"
             r'libs\mysql-connector-java-5.1.17-bin.jar;libs\abbot;%PATH%" '
-            r'gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}'
+            r"gov.epa.otaq.moves.master.commandline.MOVESCommandLine {flag} {file}"
         ).format(path=moves_path, flag=flag, file=mrs_file)
         ret = os.system(cmd)
         if ret != 0:
@@ -126,40 +128,56 @@ def _run_moves_command(flag, mrs_file, moves_home, moves_path, timeout=14400):
         env = os.environ.copy()
         homebrew_prefix = _HOMEBREW_PREFIX
         java_home = env.get(
-            'JAVA_HOME',
-            os.path.join(homebrew_prefix,
-                         'opt/openjdk@17/libexec/openjdk.jdk/Contents/Home')
+            "JAVA_HOME",
+            os.path.join(homebrew_prefix, "opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"),
         )
-        env['JAVA_HOME'] = java_home
-        env['PATH'] = os.path.join(java_home, 'bin') + os.pathsep + \
-                      os.path.join(homebrew_prefix, 'bin') + os.pathsep + \
-                      os.path.join(homebrew_prefix, 'sbin') + os.pathsep + \
-                      env.get('PATH', '')
+        env["JAVA_HOME"] = java_home
+        env["PATH"] = (
+            os.path.join(java_home, "bin")
+            + os.pathsep
+            + os.path.join(homebrew_prefix, "bin")
+            + os.pathsep
+            + os.path.join(homebrew_prefix, "sbin")
+            + os.pathsep
+            + env.get("PATH", "")
+        )
 
-        java_exe = os.path.join(java_home, 'bin', 'java')
+        java_exe = os.path.join(java_home, "bin", "java")
 
-        LOGGER.info('MOVES command: %s %s %s (cwd=%s)', java_exe, flag, mrs_file, moves_home)
+        LOGGER.info("MOVES command: %s %s %s (cwd=%s)", java_exe, flag, mrs_file, moves_home)
         result = subprocess.run(
-            [java_exe, '-Xmx512M', '-cp', cp,
-             'gov.epa.otaq.moves.master.commandline.MOVESCommandLine',
-             flag, mrs_file],
+            [
+                java_exe,
+                "-Xmx512M",
+                "-cp",
+                cp,
+                "gov.epa.otaq.moves.master.commandline.MOVESCommandLine",
+                flag,
+                mrs_file,
+            ],
             cwd=moves_home,
             env=env,
             capture_output=False,
             timeout=timeout,
         )
         if result.returncode != 0:
-            raise subprocess.CalledProcessError(result.returncode,
-                                                f'java MOVESCommandLine {flag} {mrs_file}')
-
+            raise subprocess.CalledProcessError(
+                result.returncode, f"java MOVESCommandLine {flag} {mrs_file}"
+            )
 
 
 class MOVES(Module):
-
-    def __init__(self, config, production, feedstock_loss_factors, truck_capacity,
-                 vmt_short_haul,
-                 router=None, backfill=True,
-                 **kvals):
+    def __init__(
+        self,
+        config,
+        production,
+        feedstock_loss_factors,
+        truck_capacity,
+        vmt_short_haul,
+        router=None,
+        backfill=True,
+        **kvals,
+    ):
         """
 
         :param config: [ConfigObj]
@@ -184,69 +202,76 @@ class MOVES(Module):
 
         self._router = router
 
-        self.year = self.config.get('year')
-        self.region_fips_map = RegionFipsMap(fpath=self.config.get('region_fips_map')
-                                             , backfill=backfill)
-        self.feedstock_measure_type = self.config.get('feedstock_measure_type')
+        self.year = self.config.get("year")
+        self.region_fips_map = RegionFipsMap(
+            fpath=self.config.get("region_fips_map"), backfill=backfill
+        )
+        self.feedstock_measure_type = self.config.get("feedstock_measure_type")
 
         # this is a DF read in from a csv file
         self.truck_capacity = truck_capacity
 
         # boolean controlling whether available results are used from the MOVES output database
-        self.use_cached_results = self.config.get('use_cached_results')
+        self.use_cached_results = self.config.get("use_cached_results")
 
         # scenario name
-        self.model_run_title = self.config.get('scenario_name')
+        self.model_run_title = self.config.get("scenario_name")
 
         self.moves_run_list = None
         self.prod_moves_runs = None
 
         # MOVES input and output databases - set names
-        self.moves_database = self.config.get('moves_database')
-        self.moves_output_db = self.config.get('moves_output_db')
+        self.moves_database = self.config.get("moves_database")
+        self.moves_output_db = self.config.get("moves_output_db")
 
         # open connection to MOVES default database for input/output
-        self.conn = pymysql.connect(host=self.config.get('moves_db_host'),
-                                    user=self.config.get('moves_db_user'),
-                                    password=self.config.get('moves_db_pass'),
-                                    port=self.config.get('moves_db_port'),
-                                    db=self.config.get('moves_database'),
-                                    local_infile=True)
+        self.conn = pymysql.connect(
+            host=self.config.get("moves_db_host"),
+            user=self.config.get("moves_db_user"),
+            password=self.config.get("moves_db_pass"),
+            port=self.config.get("moves_db_port"),
+            db=self.config.get("moves_database"),
+            local_infile=True,
+        )
 
         # get version of MOVES for XML trees
-        self.moves_version = self.config.get('moves_version')
+        self.moves_version = self.config.get("moves_version")
 
         # input and output file directories - get paths from config
-        self.moves_path = self.config.get('moves_path')
+        self.moves_path = self.config.get("moves_path")
         # macOS/Linux: root of MOVES source build tree (used instead of moves_path)
-        _moves_home_cfg = (self.config.get('moves_home') or '').strip()
-        self.moves_home = os.path.expanduser(_moves_home_cfg) if _moves_home_cfg else self.moves_path
-        self.moves_datafiles_path = self.config.get('moves_datafiles_path')
+        _moves_home_cfg = (self.config.get("moves_home") or "").strip()
+        self.moves_home = (
+            os.path.expanduser(_moves_home_cfg) if _moves_home_cfg else self.moves_path
+        )
+        self.moves_datafiles_path = self.config.get("moves_datafiles_path")
 
         # file-specific input directories - combine paths from config with
         # file-specific subdirectory names
-        self.save_path_importfiles = os.path.join(self.moves_datafiles_path, 'import_files')
-        self.save_path_runspecfiles = os.path.join(self.moves_datafiles_path, 'run_specs')
-        self.save_path_countyinputs = os.path.join(self.moves_datafiles_path, 'county_inputs')
-        self.save_path_nationalinputs = os.path.join(self.moves_datafiles_path, 'national_inputs')
+        self.save_path_importfiles = os.path.join(self.moves_datafiles_path, "import_files")
+        self.save_path_runspecfiles = os.path.join(self.moves_datafiles_path, "run_specs")
+        self.save_path_countyinputs = os.path.join(self.moves_datafiles_path, "county_inputs")
+        self.save_path_nationalinputs = os.path.join(self.moves_datafiles_path, "national_inputs")
 
         # store avft dataframe in self for later saving
-        self.avft = pd.read_csv(self.config.get('avft'), header=0)
+        self.avft = pd.read_csv(self.config.get("avft"), header=0)
 
         # additional input file paths
-        self.avft_filename = os.path.join(self.save_path_nationalinputs, 'avft.csv')
-        self.setenv_file = os.path.join(self.moves_path, 'setenv.bat')
+        self.avft_filename = os.path.join(self.save_path_nationalinputs, "avft.csv")
+        self.setenv_file = os.path.join(self.moves_path, "setenv.bat")
 
         # file-specific output directory - combine paths from config with
         # file-specific subdirectory names
-        self.save_path_outputs = os.path.join(self.moves_datafiles_path, 'outputs')
+        self.save_path_outputs = os.path.join(self.moves_datafiles_path, "outputs")
 
         # list of file paths for MOVES inputs and outputs
-        _path_list = [self.save_path_importfiles,
-                      self.save_path_runspecfiles,
-                      self.save_path_countyinputs,
-                      self.save_path_nationalinputs,
-                      self.save_path_outputs]
+        _path_list = [
+            self.save_path_importfiles,
+            self.save_path_runspecfiles,
+            self.save_path_countyinputs,
+            self.save_path_nationalinputs,
+            self.save_path_outputs,
+        ]
 
         # if file path does NOT exist, create it
         for _path in _path_list:
@@ -254,47 +279,48 @@ class MOVES(Module):
                 os.makedirs(_path)
 
         # user input - timespan for which MOVES is run
-        self.moves_timespan = self.config.get('moves_timespan')
+        self.moves_timespan = self.config.get("moves_timespan")
 
         # parameters for generating XML runspec files for MOVES
-        self.month = self.moves_timespan['month']
-        self.day = self.moves_timespan['day']
-        self.beginning_hour = self.moves_timespan['beginning_hour']
-        self.ending_hour = self.moves_timespan['ending_hour']
+        self.month = self.moves_timespan["month"]
+        self.day = self.moves_timespan["day"]
+        self.beginning_hour = self.moves_timespan["beginning_hour"]
+        self.ending_hour = self.moves_timespan["ending_hour"]
 
         # machine where MOVES output db lives
-        self.db_host = self.config.get('moves_db_host')
+        self.db_host = self.config.get("moves_db_host")
 
         # user input - get toggle for running moves by state-level fips
         # finds FIPS with highest total (summed across feedstocks)
         # production in each state, runs MOVES only for those FIPS (50 FIPS)
-        self.moves_by_state = self.config.get('moves_by_state')
+        self.moves_by_state = self.config.get("moves_by_state")
 
         # user input - get toggle for running moves by feedstock and state
         # finds FIPS with highest production by feedstock in each state,
         # runs MOVES only
         # for those FIPS (50 x nfeedstock FIPS)
-        self.moves_by_state_and_feedstock = self.config.get('moves_by_state_and_feedstock')
+        self.moves_by_state_and_feedstock = self.config.get("moves_by_state_and_feedstock")
 
         # @todo should this be in the Data script under a validation method?
         try:
             assert not (self.moves_by_state + self.moves_by_state_and_feedstock > 1)
         except AssertionError:
-            LOGGER.error('At most one of moves_by_state and '
-                         'moves_by_state_and_feedstock can be True')
-            raise RuntimeError('moves_by_state and '
-                               'moves_by_state_and_feedstock cannot both be '
-                               'True')
+            LOGGER.error(
+                "At most one of moves_by_state and moves_by_state_and_feedstock can be True"
+            )
+            raise RuntimeError(
+                "moves_by_state and moves_by_state_and_feedstock cannot both be True"
+            )
 
         # user input - population of combination short-haul trucks (assume one
         # per trip and only run MOVES for single trip)
-        self.pop_short_haul = self.config.as_int('pop_short_haul')
+        self.pop_short_haul = self.config.as_int("pop_short_haul")
 
         # user input - type of vehicle used to transport biomass
-        self.hpmsv_type_id = self.config.get('hpmsv_type_id')
+        self.hpmsv_type_id = self.config.get("hpmsv_type_id")
 
         # user input - subtype of vehicle used to transport biomass
-        self.source_type_id = self.config.get('source_type_id')
+        self.source_type_id = self.config.get("source_type_id")
 
         # selection of fuels to run
         # 20 is conventional diesel and 21 is biodiesel
@@ -307,24 +333,26 @@ class MOVES(Module):
         # @NOTE possibly add to GUI as user input in the future
         # @TODO: add support for list of values: 1, 2, 3, 9
         # set roadtype for example implementation in XML
-        self.fuel_supply_fuel_type_id = '1', '2', '3', '9'
-        #self.fuel_supply_fuel_type_id = '2'
+        self.fuel_supply_fuel_type_id = "1", "2", "3", "9"
+        # self.fuel_supply_fuel_type_id = '2'
 
         # user input - fraction of VMT on each road type (dictionary type)
         self._vmt_fraction = None
-        self.vmt_fraction = self.config.get('vmt_fraction')
+        self.vmt_fraction = self.config.get("vmt_fraction")
 
         # construct dataframe of road type VMTs from config file input
-        _vmt_fraction = {2: self.vmt_fraction['rural_restricted'],
-                         3: self.vmt_fraction['rural_unrestricted'],
-                         4: self.vmt_fraction['urban_restricted'],
-                         5: self.vmt_fraction['urban_unrestricted']}
+        _vmt_fraction = {
+            2: self.vmt_fraction["rural_restricted"],
+            3: self.vmt_fraction["rural_unrestricted"],
+            4: self.vmt_fraction["urban_restricted"],
+            5: self.vmt_fraction["urban_unrestricted"],
+        }
 
-        self.roadtypevmt = pd.DataFrame.from_dict(_vmt_fraction,
-                                                  orient='index',
-                                                  columns=['roadTypeVMTFraction'])
-        self.roadtypevmt['roadTypeID'] = self.roadtypevmt.index
-        self.roadtypevmt['sourceTypeID'] = np.repeat(self.source_type_id, 4)
+        self.roadtypevmt = pd.DataFrame.from_dict(
+            _vmt_fraction, orient="index", columns=["roadTypeVMTFraction"]
+        )
+        self.roadtypevmt["roadTypeID"] = self.roadtypevmt.index
+        self.roadtypevmt["sourceTypeID"] = np.repeat(self.source_type_id, 4)
 
         # polname, polkey, procname, prockey and roaddict are used in
         # generating the XML import and runspec files for MOVES
@@ -332,108 +360,106 @@ class MOVES(Module):
         # @todo polname, polkey, procname, prockey and pollutant_name could be
         # converted to user inputs to allow for more or fewer pollutant
         # calculations dictionary of pollutant shorthand to MOVES name
-        self.polname = {"NH3": "Ammonia (NH3)",
-                        "CO2atm": "Atmospheric CO2",
-                        "CO2eq": "CO2 Equivalent",
-                        "CO": "Carbon Monoxide (CO)",
-                        "ECPM": "Composite - NonECPM",
-                        "Carbon": "Elemental Carbon",
-                        "H20": "H20 (aerosol)",
-                        "CH4": "Methane (CH4)",
-                        "N2O": "Nitrous Oxide (N2O)",
-                        "NMHC": "Non-Methane Hydrocarbons",
-                        "NOX": "Oxides of Nitrogen",
-                        "PM10": "Primary Exhaust PM10  - Total",
-                        "PM25": "Primary Exhaust PM2.5 - Total",
-                        "Spar": "Sulfate Particulate",
-                        "SO2": "Sulfur Dioxide (SO2)",
-                        "TEC": "Total Energy Consumption",
-                        "THC": "Total Gaseous Hydrocarbons",
-                        "VOC": "Volatile Organic Compounds"}
+        self.polname = {
+            "NH3": "Ammonia (NH3)",
+            "CO2atm": "Atmospheric CO2",
+            "CO2eq": "CO2 Equivalent",
+            "CO": "Carbon Monoxide (CO)",
+            "ECPM": "Composite - NonECPM",
+            "Carbon": "Elemental Carbon",
+            "H20": "H20 (aerosol)",
+            "CH4": "Methane (CH4)",
+            "N2O": "Nitrous Oxide (N2O)",
+            "NMHC": "Non-Methane Hydrocarbons",
+            "NOX": "Oxides of Nitrogen",
+            "PM10": "Primary Exhaust PM10  - Total",
+            "PM25": "Primary Exhaust PM2.5 - Total",
+            "Spar": "Sulfate Particulate",
+            "SO2": "Sulfur Dioxide (SO2)",
+            "TEC": "Total Energy Consumption",
+            "THC": "Total Gaseous Hydrocarbons",
+            "VOC": "Volatile Organic Compounds",
+        }
 
         # dictionary of pollutant shorthand to MOVES pollutantid
-        self.polkey = {"NH3": "30",
-                       "CO2atm": "90",
-                       "CO2eq": "98",
-                       "CO": "2",
-                       "ECPM": "118",
-                       "Carbon": "112",
-                       "H20": "119",
-                       "CH4": "5",
-                       "N2O": "6",
-                       "NMHC": "79",
-                       "NOX": "3",
-                       "PM10": "100",
-                       "PM25": "110",
-                       "Spar": "115",
-                       "SO2": "31",
-                       "TEC": "91",
-                       "THC": "1",
-                       "VOC": "87"}
+        self.polkey = {
+            "NH3": "30",
+            "CO2atm": "90",
+            "CO2eq": "98",
+            "CO": "2",
+            "ECPM": "118",
+            "Carbon": "112",
+            "H20": "119",
+            "CH4": "5",
+            "N2O": "6",
+            "NMHC": "79",
+            "NOX": "3",
+            "PM10": "100",
+            "PM25": "110",
+            "Spar": "115",
+            "SO2": "31",
+            "TEC": "91",
+            "THC": "1",
+            "VOC": "87",
+        }
 
         # dictionary of MOVES pollutant process numbers to MOVES pollutant
         # process descriptions
-        self.procname = {"1": "Running Exhaust",
-                         "2": "Start Exhaust",
-                         "11": "Evap Permeation",
-                         "12": "Evap Fuel Vapor Venting",
-                         "13": "Evap Fuel Leaks",
-                         "15": "Crankcase Running Exhaust",
-                         "16": "Crankcase Start Exhaust",
-                         "17": "Crankcase Extended Idle Exhaust",
-                         "18": "Refueling Displacement Vapor Loss",
-                         "19": "Refueling Spillage Loss",
-                         "90": "Extended Idle Exhaust",
-                         "91": "Auxiliary Power Exhaust"}
+        self.procname = {
+            "1": "Running Exhaust",
+            "2": "Start Exhaust",
+            "11": "Evap Permeation",
+            "12": "Evap Fuel Vapor Venting",
+            "13": "Evap Fuel Leaks",
+            "15": "Crankcase Running Exhaust",
+            "16": "Crankcase Start Exhaust",
+            "17": "Crankcase Extended Idle Exhaust",
+            "18": "Refueling Displacement Vapor Loss",
+            "19": "Refueling Spillage Loss",
+            "90": "Extended Idle Exhaust",
+            "91": "Auxiliary Power Exhaust",
+        }
 
         # dictionary of shorthand pollutant names to applicable MOVES
         # pollutant process numbers
-        self.prockey = {"NH3": ["1", "2", "15", "16", "17", "90", "91"],
-                        "CO2atm": ["1", "2", "90", "91"],
-                        "CO2eq": ["1", "2", "90", "91"],
-
-                        #"CO2eq": ["1", "2", "15", "16", "17", "90", "91"],
-                        "CO": ["1", "2", "15", "16", "17", "90", "91"],
-                        "ECPM": ["1", "2", "90", "91"],
-                        "Carbon": ["1", "2", "90", "91"],
-                        "H20": ["1", "2", "90", "91"],
-                        "CH4": ["1", "2", "15", "16", "17", "90", "91"],
-                        "N2O": ["1", "2", "15", "16"],
-                        "NMHC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90", "91"],
-                        "NOX": ["1", "2", "15", "16", "17", "90", "91"],
-                        "PM10": ["1", "2", "15", "16", "17", "90", "91"],
-                        "PM25": ["1", "2", "15", "16", "17", "90", "91"],
-                        "Spar": ["1", "2", "90", "91"],
-                        "SO2": ["1", "2", "15", "16", "17", "90", "91"],
-                        "TEC": ["1", "2", "90", "91"],
-                        "THC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90", "91"],
-                        "VOC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90",
-                                "91"]}
+        self.prockey = {
+            "NH3": ["1", "2", "15", "16", "17", "90", "91"],
+            "CO2atm": ["1", "2", "90", "91"],
+            "CO2eq": ["1", "2", "90", "91"],
+            # "CO2eq": ["1", "2", "15", "16", "17", "90", "91"],
+            "CO": ["1", "2", "15", "16", "17", "90", "91"],
+            "ECPM": ["1", "2", "90", "91"],
+            "Carbon": ["1", "2", "90", "91"],
+            "H20": ["1", "2", "90", "91"],
+            "CH4": ["1", "2", "15", "16", "17", "90", "91"],
+            "N2O": ["1", "2", "15", "16"],
+            "NMHC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90", "91"],
+            "NOX": ["1", "2", "15", "16", "17", "90", "91"],
+            "PM10": ["1", "2", "15", "16", "17", "90", "91"],
+            "PM25": ["1", "2", "15", "16", "17", "90", "91"],
+            "Spar": ["1", "2", "90", "91"],
+            "SO2": ["1", "2", "15", "16", "17", "90", "91"],
+            "TEC": ["1", "2", "90", "91"],
+            "THC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90", "91"],
+            "VOC": ["1", "2", "11", "12", "13", "15", "16", "17", "18", "19", "90", "91"],
+        }
 
         # dictionary for road types
-        self.roaddict = {"1": "Off-Network",
-                         "2": "Rural Restricted Access",
-                         "3": "Rural Unrestricted Access",
-                         "4": "Urban Restricted Access",
-                         "5": "Urban Unrestricted Access"}
+        self.roaddict = {
+            "1": "Off-Network",
+            "2": "Rural Restricted Access",
+            "3": "Rural Unrestricted Access",
+            "4": "Urban Restricted Access",
+            "5": "Urban Unrestricted Access",
+        }
 
         # create data frame for renaming pollutants during postprocessing
-        self.pollutant_names = pd.DataFrame({'pollutant': ['NH3',
-                                                           'CO2eq',
-                                                           'CO',
-                                                           'NOX',
-                                                           'PM10',
-                                                           'PM25',
-                                                           'SO2',
-                                                           'VOC'],
-                                             'pollutantID': [30,
-                                                             98,
-                                                             2,
-                                                             3,
-                                                             100,
-                                                             110,
-                                                             31,
-                                                             87]})
+        self.pollutant_names = pd.DataFrame(
+            {
+                "pollutant": ["NH3", "CO2eq", "CO", "NOX", "PM10", "PM25", "SO2", "VOC"],
+                "pollutantID": [30, 98, 2, 3, 100, 110, 31, 87],
+            }
+        )
 
     @property
     def router(self):
@@ -442,11 +468,13 @@ class MOVES(Module):
     @router.setter
     def router(self, value):
         try:
-            getattr(value, 'get_route')
+            getattr(value, "get_route")
         except AttributeError:
-            LOGGER.error('%s is NOT a valid routing engine. '
-                         'Method .get_route((start lon, start lat), (end lon, end lat)'
-                         ' is required' % value)
+            LOGGER.error(
+                "%s is NOT a valid routing engine. "
+                "Method .get_route((start lon, start lat), (end lon, end lat)"
+                " is required" % value
+            )
         else:
             self._router = value
 
@@ -461,7 +489,7 @@ class MOVES(Module):
         try:
             assert sum(value.values()) == 1
         except AssertionError:
-            raise ValueError('vmt_fraction must sum to 1.0')
+            raise ValueError("vmt_fraction must sum to 1.0")
         else:
             self._vmt_fraction = value
 
@@ -475,14 +503,15 @@ class MOVES(Module):
         _moves_cursor = self.conn.cursor()
 
         kvals = dict()
-        kvals['moves_output_db'] = self.moves_output_db
+        kvals["moves_output_db"] = self.moves_output_db
 
         _create_database_sql = """CREATE DATABASE IF NOT EXISTS {moves_output_db};""".format(
-                **kvals)
+            **kvals
+        )
 
         _create_tables_dict = dict()
 
-        _create_tables_dict['activitytype'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["activitytype"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`activitytype` (
             activityTypeID       SMALLINT UNSIGNED NOT NULL,
             activityType         CHAR(20) NOT NULL,            
@@ -490,7 +519,7 @@ class MOVES(Module):
             PRIMARY KEY (activityTypeID)            
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['baserateoutput'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["baserateoutput"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`baserateoutput` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             iterationID          SMALLINT UNSIGNED NULL DEFAULT 1,
@@ -512,7 +541,7 @@ class MOVES(Module):
             emissionRate         FLOAT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['baserateunits'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["baserateunits"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`baserateunits` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             pollutantID          SMALLINT UNSIGNED NULL DEFAULT NULL,
@@ -523,7 +552,7 @@ class MOVES(Module):
             emissionBaseRateUnitsDenominator VARCHAR(50) NULL DEFAULT ''
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['bundletracking'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["bundletracking"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`bundletracking` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             hostType             CHAR(1) NOT NULL DEFAULT ' ',
@@ -550,8 +579,12 @@ class MOVES(Module):
             KEY (MOVESRunID, hostType, loopableClassName)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        if self.moves_version.startswith('MOVES3') or self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
-            _create_tables_dict['movesactivityoutput'] = """CREATE TABLE IF NOT EXISTS
+        if (
+            self.moves_version.startswith("MOVES3")
+            or self.moves_version.startswith("MOVES4")
+            or self.moves_version.startswith("MOVES5")
+        ):
+            _create_tables_dict["movesactivityoutput"] = """CREATE TABLE IF NOT EXISTS
                 {moves_output_db}.`movesactivityoutput` (
                 MOVESRunID           SMALLINT UNSIGNED NOT NULL,
                 iterationID          SMALLINT UNSIGNED NULL DEFAULT 1,
@@ -580,7 +613,7 @@ class MOVES(Module):
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
         else:
             # @TODO: add warning that we're assuming MOVES2014b or remove this altogether
-            _create_tables_dict['movesactivityoutput'] = """CREATE TABLE IF NOT EXISTS
+            _create_tables_dict["movesactivityoutput"] = """CREATE TABLE IF NOT EXISTS
                 {moves_output_db}.`movesactivityoutput` (
                 MOVESRunID           SMALLINT UNSIGNED NOT NULL,
                 iterationID          SMALLINT UNSIGNED NULL DEFAULT 1,
@@ -606,8 +639,8 @@ class MOVES(Module):
                 activityMean         FLOAT NULL DEFAULT NULL,
                 activitySigma        FLOAT NULL DEFAULT NULL
             ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
- 
-        _create_tables_dict['moveserror'] = """CREATE TABLE IF NOT EXISTS
+
+        _create_tables_dict["moveserror"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`moveserror` (
             MOVESErrorID         INTEGER  UNSIGNED NOT NULL AUTO_INCREMENT,
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -627,7 +660,7 @@ class MOVES(Module):
             KEY IX_MOVES_RUN_ID (MOVESRunID)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['moveseventlog'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["moveseventlog"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`moveseventlog` (
             EventRecordID        INT UNSIGNED NOT NULL,
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -638,7 +671,7 @@ class MOVES(Module):
             Duration             INT UNSIGNED NULL
         );""".format(**kvals)
 
-        _create_tables_dict['movesoutput'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["movesoutput"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`movesoutput` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             iterationID          SMALLINT UNSIGNED NULL DEFAULT 1,
@@ -667,7 +700,7 @@ class MOVES(Module):
             emissionQuantSigma   FLOAT NULL  DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['movesrun'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["movesrun"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`movesrun` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL auto_increment,
             outputTimePeriod     CHAR(5) NULL DEFAULT NULL,
@@ -696,7 +729,7 @@ class MOVES(Module):
             PRIMARY KEY (MOVESRunID)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['movestablesused'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["movestablesused"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`movestablesused` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             databaseServer       VARCHAR(100) NOT NULL DEFAULT '',
@@ -709,7 +742,7 @@ class MOVES(Module):
             KEY (MOVESRunID, tableUseSequence)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['movesworkerused'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["movesworkerused"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`movesworkersused` (
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
             workerVersion        VARCHAR(100) NOT NULL,
@@ -720,7 +753,7 @@ class MOVES(Module):
             PRIMARY KEY (MOVESRunID, workerVersion, workerComputerID, workerID)
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['rateperdistance'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["rateperdistance"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`rateperdistance` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -743,7 +776,7 @@ class MOVES(Module):
             ratePerDistance      FLOAT NULL DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['rateperhour'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["rateperhour"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`rateperhour` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -765,7 +798,7 @@ class MOVES(Module):
             ratePerHour          FLOAT NULL DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['rateperprofile'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["rateperprofile"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`rateperprofile` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -785,7 +818,7 @@ class MOVES(Module):
             ratePerVehicle       FLOAT NULL DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['rateperstart'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["rateperstart"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`rateperstart` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -806,7 +839,7 @@ class MOVES(Module):
             ratePerStart         FLOAT NULL DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['ratepervehicle'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["ratepervehicle"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`ratepervehicle` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -827,7 +860,7 @@ class MOVES(Module):
             ratePerVehicle       FLOAT NULL DEFAULT NULL
         ) ENGINE=MyISAM DEFAULT CHARSET=latin1 DELAY_KEY_WRITE=1;""".format(**kvals)
 
-        _create_tables_dict['startspervehicle'] = """CREATE TABLE IF NOT EXISTS
+        _create_tables_dict["startspervehicle"] = """CREATE TABLE IF NOT EXISTS
             {moves_output_db}.`startspervehicle` (
             MOVESScenarioID      VARCHAR(40) NOT NULL DEFAULT '',
             MOVESRunID           SMALLINT UNSIGNED NOT NULL,
@@ -849,7 +882,7 @@ class MOVES(Module):
             _moves_cursor.execute(_create_database_sql)
             # @TODO record 'database already exists' warning to logger
         except pymysql.err.MySQLError as _mysqlerror:
-            LOGGER.error('MOVES output database was NOT created: %s' % _mysqlerror)
+            LOGGER.error("MOVES output database was NOT created: %s" % _mysqlerror)
 
         # create all tables in database
         for _sql in _create_tables_dict:
@@ -857,7 +890,7 @@ class MOVES(Module):
                 _moves_cursor.execute(_create_tables_dict[_sql])
                 # @TODO record 'table already exists' warning to logger
             except pymysql.err.MySQLError as _mysqlerror:
-                LOGGER.error('%s table was NOT created: %s' % _sql, _mysqlerror)
+                LOGGER.error("%s table was NOT created: %s" % _sql, _mysqlerror)
 
         # close cursor after database creation
         _moves_cursor.close()
@@ -880,37 +913,37 @@ class MOVES(Module):
         :return: None
         """
 
-        LOGGER.debug('Creating national data files for MOVES')
+        LOGGER.debug("Creating national data files for MOVES")
 
         # initialize kvals for string formatting
         kvals = dict()
-        kvals['moves_database'] = self.moves_database
-        kvals['source_type_id'] = self.source_type_id
+        kvals["moves_database"] = self.moves_database
+        kvals["source_type_id"] = self.source_type_id
 
         # export MOVES defaults for national inputs
         # hourVMTFraction, monthVMTFraction, dayVMTFraction,
         # and avgspeeddistribution
-        _tables = ['hourvmtfraction', 'monthvmtfraction',
-                   'dayvmtfraction', 'avgspeeddistribution']
+        _tables = ["hourvmtfraction", "monthvmtfraction", "dayvmtfraction", "avgspeeddistribution"]
 
         for _table in _tables:
-            kvals['table'] = _table
+            kvals["table"] = _table
 
             _table_sql = """SELECT * FROM {moves_database}.{table};""".format(**kvals)
 
             # pull data from database and save in a csv
-            pd.read_sql(_table_sql, self.conn).to_csv(os.path.join(
-                    self.save_path_nationalinputs, '%s.csv' % (kvals['table'],)),
-                    index=False)
+            pd.read_sql(_table_sql, self.conn).to_csv(
+                os.path.join(self.save_path_nationalinputs, "%s.csv" % (kvals["table"],)),
+                index=False,
+            )
 
         # save alternative vehicle fuels and technology (avft) file to
         # national input file directory
-        self.avft.to_csv(self.avft_filename, sep=',', index=False)
+        self.avft.to_csv(self.avft_filename, sep=",", index=False)
 
         # default age distribution file creation
         # age distribution for user-specified source_type_id and year is pulled
         #  in from the MOVES database and written to file
-        kvals['year'] = self.year
+        kvals["year"] = self.year
 
         _agedist_sql = """SELECT * FROM
         {moves_database}.sourcetypeagedistribution WHERE
@@ -918,15 +951,16 @@ class MOVES(Module):
 
         # save this file name to self so it can be used by create_xml_import
         self.agedistfilename = os.path.join(
-                self.save_path_nationalinputs,
-                'default-age-distribution-tool-moves%s.csv' % (self.year,))
+            self.save_path_nationalinputs,
+            "default-age-distribution-tool-moves%s.csv" % (self.year,),
+        )
 
         # pull data from database and save in a csv
         pd.read_sql(_agedist_sql, self.conn).to_csv(self.agedistfilename, index=False)
 
         # write roadtypevmt (constructed in int) to csv
-        self.roadtypevmt_filename = os.path.join(self.save_path_nationalinputs, 'roadtype.csv')
-        self.roadtypevmt.to_csv(self.roadtypevmt_filename, sep=',', index=False)
+        self.roadtypevmt_filename = os.path.join(self.save_path_nationalinputs, "roadtype.csv")
+        self.roadtypevmt.to_csv(self.roadtypevmt_filename, sep=",", index=False)
 
     def _create_county_data(self, fips):
         """
@@ -944,45 +978,54 @@ class MOVES(Module):
         :return:
         """
 
-        LOGGER.debug('Creating county-level data files for MOVES')
+        LOGGER.debug("Creating county-level data files for MOVES")
 
         # set up kvals for SQL query formatting
         kvals = dict()
-        kvals['fips'] = fips
-        kvals['year'] = self.year
-        kvals['moves_database'] = self.moves_database
-        kvals['fuel_subtype_id'] = ', '.join([str(_) for _ in self.fuel_subtype_id])
-        kvals['fuel_supply_fuel_type_id'] = ', '.join([str(_) for _ in self.fuel_supply_fuel_type_id])
-        kvals['countyID'] = str(int(fips))
-        kvals['zoneID'] = str(int(fips)) + '0'
+        kvals["fips"] = fips
+        kvals["year"] = self.year
+        kvals["moves_database"] = self.moves_database
+        kvals["fuel_subtype_id"] = ", ".join([str(_) for _ in self.fuel_subtype_id])
+        kvals["fuel_supply_fuel_type_id"] = ", ".join(
+            [str(_) for _ in self.fuel_supply_fuel_type_id]
+        )
+        kvals["countyID"] = str(int(fips))
+        kvals["zoneID"] = str(int(fips)) + "0"
 
         # annual vehicle miles traveled by vehicle type
         # need one for each FIPS
-        _vmt = pd.DataFrame({'HPMSVtypeID': self.hpmsv_type_id,
-                             'yearID': self.year,
-                             'HPMSBaseYearVMT': self.vmt_short_haul},
-                            index=['0'])
+        _vmt = pd.DataFrame(
+            {
+                "HPMSVtypeID": self.hpmsv_type_id,
+                "yearID": self.year,
+                "HPMSBaseYearVMT": self.vmt_short_haul,
+            },
+            index=["0"],
+        )
 
         # this name is FIPS dependent, cannot be created in init
-        self.vmt_filename = os.path.join(self.save_path_countyinputs,
-                                         '{fips}_vehiclemiletraveled_{'
-                                         'year}.csv'.format(**kvals))
+        self.vmt_filename = os.path.join(
+            self.save_path_countyinputs, "{fips}_vehiclemiletraveled_{year}.csv".format(**kvals)
+        )
 
         # write vehicle miles traveled to file
         _vmt.to_csv(self.vmt_filename, index=False)
 
         # source type population (number of vehicles by vehicle type)
         # need one for each fips
-        _sourcetype = pd.DataFrame({'yearID': self.year,
-                                    'sourceTypeID': self.source_type_id,
-                                    'sourceTypePopulation':
-                                        self.pop_short_haul},
-                                   index=['0'])
+        _sourcetype = pd.DataFrame(
+            {
+                "yearID": self.year,
+                "sourceTypeID": self.source_type_id,
+                "sourceTypePopulation": self.pop_short_haul,
+            },
+            index=["0"],
+        )
 
         # this name is FIPS dependent, cannot be created in init
-        self.sourcetype_filename = os.path.join(self.save_path_countyinputs,
-                                                '{fips}_sourcetype_{'
-                                                'year}.csv'.format(**kvals))
+        self.sourcetype_filename = os.path.join(
+            self.save_path_countyinputs, "{fips}_sourcetype_{year}.csv".format(**kvals)
+        )
 
         # write source type population to file
         _sourcetype.to_csv(self.sourcetype_filename, index=False)
@@ -994,15 +1037,16 @@ class MOVES(Module):
                             (SELECT DISTINCT regionID FROM {moves_database}.regioncounty 
                             WHERE countyID = '{countyID}' AND fuelYearID = '{year}')
                             AND {moves_database}.fuelsupply.fuelYearID = '{year}';""".format(
-                **kvals)
+            **kvals
+        )
 
         # save for later use in create_xml_imports
-        self.fuelsupply_filename = os.path.join(self.save_path_countyinputs,
-                                                '{fips}_fuelsupply_{year}.csv'.format(**kvals))
+        self.fuelsupply_filename = os.path.join(
+            self.save_path_countyinputs, "{fips}_fuelsupply_{year}.csv".format(**kvals)
+        )
 
         # pull data from database and save in a csv
-        pd.read_sql(_fuelsupply_sql, self.conn).to_csv(
-                self.fuelsupply_filename, index=False)
+        pd.read_sql(_fuelsupply_sql, self.conn).to_csv(self.fuelsupply_filename, index=False)
 
         # export county-level fuel formulation data
         # need one for each FIPS-year combination
@@ -1012,13 +1056,11 @@ class MOVES(Module):
 
         # this name is FIPS dependent, cannot be created in init
         self.fuelformulation_filename = os.path.join(
-                self.save_path_countyinputs, '{fips}_fuelformulation_{'
-                                             'year}.csv'.format(**kvals))
+            self.save_path_countyinputs, "{fips}_fuelformulation_{year}.csv".format(**kvals)
+        )
 
         # pull data from database and save in a csv
-        pd.read_sql(_fuelform_sql,
-                    self.conn).to_csv(self.fuelformulation_filename,
-                                      index=False)
+        pd.read_sql(_fuelform_sql, self.conn).to_csv(self.fuelformulation_filename, index=False)
 
         # export county-level fuel usage fraction data
         # need one for each FIPS-year combination
@@ -1033,13 +1075,12 @@ class MOVES(Module):
                             ({fuel_supply_fuel_type_id});""".format(**kvals)
 
         # this name is FIPS dependent, cannot be created in init
-        self.fuelusage_filename = os.path.join(self.save_path_countyinputs,
-                                               '{fips}_fuelusagefraction_{'
-                                               'year}.csv'.format(**kvals))
+        self.fuelusage_filename = os.path.join(
+            self.save_path_countyinputs, "{fips}_fuelusagefraction_{year}.csv".format(**kvals)
+        )
 
         # pull data from database and save in a csv
-        pd.read_sql(_fuelusagename_sql, self.conn).to_csv(
-                self.fuelusage_filename, index=False)
+        pd.read_sql(_fuelusagename_sql, self.conn).to_csv(self.fuelusage_filename, index=False)
 
         # export county-level meteorology data
         # need one for each FIPS
@@ -1047,12 +1088,12 @@ class MOVES(Module):
                       WHERE {moves_database}.zonemonthhour.zoneID = {zoneID}""".format(**kvals)
 
         # this name is FIPS dependent, cannot be created in init
-        self.met_filename = os.path.join(self.save_path_countyinputs,
-                                         '{fips}_met.csv'.format(**kvals))
+        self.met_filename = os.path.join(
+            self.save_path_countyinputs, "{fips}_met.csv".format(**kvals)
+        )
 
         # pull data from database and save in a csv
-        pd.read_sql(_met_sql, self.conn).to_csv(self.met_filename,
-                                                index=False)
+        pd.read_sql(_met_sql, self.conn).to_csv(self.met_filename, index=False)
 
         # county-specific road type VMT fractions from zoneroadtype
         # MOVES zoneroadtype has county-level SHO allocation factors by road type.
@@ -1069,25 +1110,31 @@ class MOVES(Module):
               AND roadTypeID IN (2, 3, 4, 5);""".format(**kvals)
 
         _zrt = pd.read_sql(_roadtype_sql, self.conn)
-        _total_sho = _zrt['SHOAllocFactor'].sum() if not _zrt.empty else 0.0
+        _total_sho = _zrt["SHOAllocFactor"].sum() if not _zrt.empty else 0.0
 
         if not _zrt.empty and _total_sho > 0:
             _zrt = _zrt.copy()
-            _zrt['roadTypeVMTFraction'] = _zrt['SHOAllocFactor'] / _total_sho
-            _zrt['sourceTypeID'] = int(self.source_type_id)
-            _county_roadtype = _zrt[['sourceTypeID', 'roadTypeID',
-                                     'roadTypeVMTFraction']].reset_index(drop=True)
-            LOGGER.debug('County %s: road type fractions from zoneroadtype', fips)
+            _zrt["roadTypeVMTFraction"] = _zrt["SHOAllocFactor"] / _total_sho
+            _zrt["sourceTypeID"] = int(self.source_type_id)
+            _county_roadtype = _zrt[
+                ["sourceTypeID", "roadTypeID", "roadTypeVMTFraction"]
+            ].reset_index(drop=True)
+            LOGGER.debug("County %s: road type fractions from zoneroadtype", fips)
         else:
             # National default from config vmt_fraction — no county-specific data
             LOGGER.warning(
-                'County %s: zoneroadtype returned no rows for zoneID=%s; '
-                'using national-default vmt_fraction from config', fips, kvals['zoneID'])
+                "County %s: zoneroadtype returned no rows for zoneID=%s; "
+                "using national-default vmt_fraction from config",
+                fips,
+                kvals["zoneID"],
+            )
             _county_roadtype = self.roadtypevmt[
-                ['sourceTypeID', 'roadTypeID', 'roadTypeVMTFraction']].copy()
+                ["sourceTypeID", "roadTypeID", "roadTypeVMTFraction"]
+            ].copy()
 
         self.roadtypevmt_filename = os.path.join(
-            self.save_path_countyinputs, '{fips}_roadtype.csv'.format(**kvals))
+            self.save_path_countyinputs, "{fips}_roadtype.csv".format(**kvals)
+        )
         _county_roadtype.to_csv(self.roadtypevmt_filename, index=False)
 
     def _create_xml_import(self, fips):
@@ -1100,8 +1147,8 @@ class MOVES(Module):
 
         # assemble kvals dict for string & filepath formatting
         kvals = dict()
-        kvals['fips'] = fips
-        kvals['year'] = self.year
+        kvals["fips"] = fips
+        kvals["year"] = self.year
 
         # set parser to leave CDATA sections in document
         _parser = etree.XMLParser(strip_cdata=False, recover=True)
@@ -1109,68 +1156,94 @@ class MOVES(Module):
         # create these files here since they were generated in a loop in
         # create_national_inputs - no stored filename
         # path to average speed distribution file (national inputs)
-        _avgspeeddist_filename = os.path.join(self.save_path_nationalinputs,
-                                              'avgspeeddistribution.csv')
-        _month_vmt_filename = os.path.join(self.save_path_nationalinputs, 'monthvmtfraction.csv')
-        _day_vmt_filename = os.path.join(self.save_path_nationalinputs, 'dayvmtfraction.csv')
-        _hour_vmt_filename = os.path.join(self.save_path_nationalinputs, 'hourvmtfraction.csv')
+        _avgspeeddist_filename = os.path.join(
+            self.save_path_nationalinputs, "avgspeeddistribution.csv"
+        )
+        _month_vmt_filename = os.path.join(self.save_path_nationalinputs, "monthvmtfraction.csv")
+        _day_vmt_filename = os.path.join(self.save_path_nationalinputs, "dayvmtfraction.csv")
+        _hour_vmt_filename = os.path.join(self.save_path_nationalinputs, "hourvmtfraction.csv")
 
         # create XML for elements with CDATA
         # @TODO: verify this is still necessary; not in import file so check runspec
         self.internalcontrol = etree.XML(
-                '<internalcontrolstrategy classname="gov.epa.otaq.moves.master.implementation.'
-                'ghg.internalcontrolstrategies.rateofprogress.RateOfProgressStrategy">'
-                '<![CDATA[useParameters    No]]></internalcontrolstrategy>',
-                _parser)
+            '<internalcontrolstrategy classname="gov.epa.otaq.moves.master.implementation.'
+            'ghg.internalcontrolstrategies.rateofprogress.RateOfProgressStrategy">'
+            "<![CDATA[useParameters    No]]></internalcontrolstrategy>",
+            _parser,
+        )
         self.agename = "<filename>{agedistfilename}</filename>".format(
-                agedistfilename=self.agedistfilename)
+            agedistfilename=self.agedistfilename
+        )
         self.agefile = etree.XML(self.agename, _parser)
         self.speedfile = etree.XML(
-                "<filename>{speedfilename}</filename>".format(
-                        speedfilename=_avgspeeddist_filename), _parser)
+            "<filename>{speedfilename}</filename>".format(speedfilename=_avgspeeddist_filename),
+            _parser,
+        )
         self.fuelsupfile = etree.XML(
-                "<filename>{fuelsupfilename}</filename>".format(
-                        fuelsupfilename=self.fuelsupply_filename), _parser)
+            "<filename>{fuelsupfilename}</filename>".format(
+                fuelsupfilename=self.fuelsupply_filename
+            ),
+            _parser,
+        )
         self.fuelformfile = etree.XML(
-                "<filename>{fuelformfilename}</filename>".format(
-                        fuelformfilename=self.fuelformulation_filename), _parser)
+            "<filename>{fuelformfilename}</filename>".format(
+                fuelformfilename=self.fuelformulation_filename
+            ),
+            _parser,
+        )
         self.fuelusagefile = etree.XML(
-                "<filename>{fuelusagefilename}</filename>".format(
-                        fuelusagefilename=self.fuelusage_filename), _parser)
-        self.avftfile = etree.XML("<filename>{avftfilename}</filename>".format(
-                avftfilename=self.avft_filename), _parser)
-        self.metfile = etree.XML("<filename>{metfilename}</filename>".format(
-                metfilename=self.met_filename), _parser)
+            "<filename>{fuelusagefilename}</filename>".format(
+                fuelusagefilename=self.fuelusage_filename
+            ),
+            _parser,
+        )
+        self.avftfile = etree.XML(
+            "<filename>{avftfilename}</filename>".format(avftfilename=self.avft_filename), _parser
+        )
+        self.metfile = etree.XML(
+            "<filename>{metfilename}</filename>".format(metfilename=self.met_filename), _parser
+        )
         self.roadtypefile = etree.XML(
-                "<filename>{roadtypefilename}</filename>".format(
-                        roadtypefilename=self.roadtypevmt_filename), _parser)
+            "<filename>{roadtypefilename}</filename>".format(
+                roadtypefilename=self.roadtypevmt_filename
+            ),
+            _parser,
+        )
         self.sourcetypefile = etree.XML(
-                "<filename>{sourcetypefilename}</filename>".format(
-                        sourcetypefilename=self.sourcetype_filename), _parser)
+            "<filename>{sourcetypefilename}</filename>".format(
+                sourcetypefilename=self.sourcetype_filename
+            ),
+            _parser,
+        )
         self.HPMSyearfile = etree.XML(
-                "<filename>{vmtfilename}</filename>".format(
-                        vmtfilename=self.vmt_filename), _parser)
+            "<filename>{vmtfilename}</filename>".format(vmtfilename=self.vmt_filename), _parser
+        )
         self.monthVMTfile = etree.XML(
-                "<filename>{monthvmtfilename}</filename>".format(
-                        monthvmtfilename=_month_vmt_filename), _parser)
+            "<filename>{monthvmtfilename}</filename>".format(monthvmtfilename=_month_vmt_filename),
+            _parser,
+        )
         self.dayVMTfile = etree.XML(
-                "<filename>{dayvmtfilename}</filename>".format(
-                        dayvmtfilename=_day_vmt_filename), _parser)
+            "<filename>{dayvmtfilename}</filename>".format(dayvmtfilename=_day_vmt_filename),
+            _parser,
+        )
         self.hourVMTfile = etree.XML(
-                "<filename>{hourvmtfilename}</filename>".format(
-                        hourvmtfilename=_hour_vmt_filename), _parser)
+            "<filename>{hourvmtfilename}</filename>".format(hourvmtfilename=_hour_vmt_filename),
+            _parser,
+        )
 
         # input database — sanitize version string (dots not valid in MySQL DB names)
-        _version_safe = self.moves_version.replace('.', '_')
-        self.db_in = "fips_{fips}_{year}_{version}_in".format(fips=fips,
-                                                              year=str(self.year),
-                                                              version=_version_safe)
+        _version_safe = self.moves_version.replace(".", "_")
+        self.db_in = "fips_{fips}_{year}_{version}_in".format(
+            fips=fips, year=str(self.year), version=_version_safe
+        )
         # scenario ID for MOVES runs
         # ends up in tables in the MOVES output database
-        self.scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
-                                                           day=str(self.day),
-                                                           month='_'.join([str(_) for _ in self.month]),
-                                                           year=str(self.year))
+        self.scenid = "{fips}_{year}_{month}_{day}".format(
+            fips=fips,
+            day=str(self.day),
+            month="_".join([str(_) for _ in self.month]),
+            year=str(self.year),
+        )
 
         # Create XML element tree for geographic selection
 
@@ -1211,18 +1284,20 @@ class MOVES(Module):
         # @TODO convert all of these to user inputs pulled from config
         # @TODO: add support for multiple fuel types (1, 2, 3, and 9) (should be defined in self.fuel_supply_fuel_type_ids
 
-        fueltypedesc = {'1': 'Gasoline',
-                        '2': 'Diesel Fuel',
-                        '3': 'Compressed Natural Gas (CNG)',
-                        '9': 'Electricity'}
+        fueltypedesc = {
+            "1": "Gasoline",
+            "2": "Diesel Fuel",
+            "3": "Compressed Natural Gas (CNG)",
+            "9": "Electricity",
+        }
 
         onroadvehicleselections = etree.Element("onroadvehicleselections")
         for fuel_type_id in self.fuel_supply_fuel_type_id:
-
-            vehicle_selection = etree.SubElement(onroadvehicleselections,
-                                                 "onroadvehicleselection", fueltypeid=fuel_type_id)
+            vehicle_selection = etree.SubElement(
+                onroadvehicleselections, "onroadvehicleselection", fueltypeid=fuel_type_id
+            )
             vehicle_selection.set("fueltypedesc", fueltypedesc[fuel_type_id])
-            vehicle_selection.set("sourcetypeid", '61')
+            vehicle_selection.set("sourcetypeid", "61")
             vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
 
         # Create XML element tree for MOVES pollutant processes
@@ -1238,9 +1313,9 @@ class MOVES(Module):
         for _pol in self.polname:
             # loop through all processes associated with each pollutant
             for _proc in self.prockey[_pol]:
-                pollutant = etree.SubElement(polproc,
-                                             "pollutantprocessassociation",
-                                             pollutantkey=self.polkey[_pol])
+                pollutant = etree.SubElement(
+                    polproc, "pollutantprocessassociation", pollutantkey=self.polkey[_pol]
+                )
                 pollutant.set("pollutantname", self.polname[_pol])
                 pollutant.set("processkey", _proc)
                 pollutant.set("processname", self.procname[_proc])
@@ -1270,228 +1345,224 @@ class MOVES(Module):
         etree.SubElement(std, "filename")
 
         # Create full element tree for MOVES import file
-        if self.moves_version.startswith('MOVES3'):
-            importfilestring = (
-                E.moves(
-                        E.importer(
-                                E.filters(
-                                        E.geographicselections(geoselect),
-                                        timespan,
-                                        #E.onroadvehicleselections(vehicle_selection),
-                                        onroadvehicleselections,
-                                        E.offroadvehicleselections(""),
-                                        E.offroadvehiclesccs(""),
-                                        roadtypes,
-                                        polproc,
-                                ),
-                                databasesel,
-                                E.agedistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.sourceTypeAgeDistribution(self.agefile))),
-                                E.avgspeeddistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.avgSpeedDistribution(self.speedfile))),
-                                E.fuel(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.FuelSupply(self.fuelsupfile),
-                                                E.FuelFormulation(self.fuelformfile),
-                                                E.FuelUsageFraction(self.fuelusagefile),
-                                                E.AVFT(self.avftfile),
-                                        )),
-                                E.zoneMonthHour(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.zonemonthhour(self.metfile))),
-                                E.rampfraction(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.roadType(E.filename("")))),
-                                E.roadtypedistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.roadTypeDistribution(self.roadtypefile))),
-                                E.sourcetypepopulation(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.sourceTypeYear(self.sourcetypefile))),
-                                E.starts(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.startsPerDay(E.filename("")),
-                                                E.startsHourFraction(E.filename("")),
-                                                E.startsSourceTypeFraction(E.filename("")),
-                                                E.startsMonthAdjust(E.filename("")),
-                                                E.importStartsOpModeDistribution(E.filename("")),
-                                                E.Starts(E.filename("")),
-                                        )),
-                                E.vehicletypevmt(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.HPMSVtypeYear(self.HPMSyearfile),
-                                                E.monthVMTFraction(self.monthVMTfile),
-                                                E.dayVMTFraction(self.dayVMTfile),
-                                                E.hourVMTFraction(self.hourVMTfile),
-                                        )),
-                                E.hotelling(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.hotellingActivityDistribution(E.filename("")),
-                                                E.hotellingHours(E.filename("")))),
-                                E.imcoverage(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.IMCoverage(E.filename("")))),
-                                E.onroadretrofit(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.onRoadRetrofit(E.filename("")))),
-                                E.generic(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.anytable(E.tablename("agecategory"),
-                                                           E.filename("")))),
-                                mode="county")
+        if self.moves_version.startswith("MOVES3"):
+            importfilestring = E.moves(
+                E.importer(
+                    E.filters(
+                        E.geographicselections(geoselect),
+                        timespan,
+                        # E.onroadvehicleselections(vehicle_selection),
+                        onroadvehicleselections,
+                        E.offroadvehicleselections(""),
+                        E.offroadvehiclesccs(""),
+                        roadtypes,
+                        polproc,
+                    ),
+                    databasesel,
+                    E.agedistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.sourceTypeAgeDistribution(self.agefile)),
+                    ),
+                    E.avgspeeddistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.avgSpeedDistribution(self.speedfile)),
+                    ),
+                    E.fuel(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.FuelSupply(self.fuelsupfile),
+                            E.FuelFormulation(self.fuelformfile),
+                            E.FuelUsageFraction(self.fuelusagefile),
+                            E.AVFT(self.avftfile),
+                        ),
+                    ),
+                    E.zoneMonthHour(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.zonemonthhour(self.metfile)),
+                    ),
+                    E.rampfraction(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.roadType(E.filename(""))),
+                    ),
+                    E.roadtypedistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.roadTypeDistribution(self.roadtypefile)),
+                    ),
+                    E.sourcetypepopulation(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.sourceTypeYear(self.sourcetypefile)),
+                    ),
+                    E.starts(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.startsPerDay(E.filename("")),
+                            E.startsHourFraction(E.filename("")),
+                            E.startsSourceTypeFraction(E.filename("")),
+                            E.startsMonthAdjust(E.filename("")),
+                            E.importStartsOpModeDistribution(E.filename("")),
+                            E.Starts(E.filename("")),
+                        ),
+                    ),
+                    E.vehicletypevmt(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.HPMSVtypeYear(self.HPMSyearfile),
+                            E.monthVMTFraction(self.monthVMTfile),
+                            E.dayVMTFraction(self.dayVMTfile),
+                            E.hourVMTFraction(self.hourVMTfile),
+                        ),
+                    ),
+                    E.hotelling(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.hotellingActivityDistribution(E.filename("")),
+                            E.hotellingHours(E.filename("")),
+                        ),
+                    ),
+                    E.imcoverage(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.IMCoverage(E.filename(""))),
+                    ),
+                    E.onroadretrofit(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.onRoadRetrofit(E.filename(""))),
+                    ),
+                    E.generic(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.anytable(E.tablename("agecategory"), E.filename(""))),
+                    ),
+                    mode="county",
                 )
             )
-        elif self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
-            importfilestring = (
-                E.moves(
-                        E.importer(
-                                E.filters(
-                                        E.geographicselections(geoselect),
-                                        timespan,
-                                        #E.onroadvehicleselections(vehicle_selection),
-                                        onroadvehicleselections,
-                                        E.offroadvehicleselections(""),
-                                        E.offroadvehiclesccs(""),
-                                        roadtypes,
-                                        polproc,
-                                ),
-                                databasesel,
-                                E.agedistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.sourceTypeAgeDistribution(self.agefile))),
-                                E.avgspeeddistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.avgSpeedDistribution(self.speedfile))),
-                                E.fuel(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.FuelSupply(self.fuelsupfile),
-                                                E.FuelFormulation(self.fuelformfile),
-                                                E.FuelUsageFraction(self.fuelusagefile),
-                                                E.AVFT(self.avftfile),
-                                        )),
-                                        # @TODO (fixed): zoneMonthHour is now zonemonthhour and zonemonthhour is now zoneMonthHour
-                                E.zonemonthhour(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.zoneMonthHour(self.metfile))),
-                                # @TODO (fixed): remove rampfraction; not in new MOVES5 import file
-                                # E.rampfraction(
-                                #         etree.XML('<description><![CDATA[]]></description>',
-                                #                   _parser),
-                                #         E.parts(E.roadType(E.filename("")))),
-                                E.roadtypedistribution(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.roadTypeDistribution(self.roadtypefile))),
-                                E.sourcetypepopulation(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.sourceTypeYear(self.sourcetypefile))),
-                                E.starts(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                # @TODO (fixed): add startsPerDayPerVehicle (empty string)
-                                                E.startsPerDayPerVehicle(E.filename("")),
-                                                E.startsPerDay(E.filename("")),
-                                                E.startsHourFraction(E.filename("")),
-                                                #E.startsSourceTypeFraction(E.filename("")),
-                                                E.startsMonthAdjust(E.filename("")),
-                                                E.startsAgeAdjustment(E.filename("")),
-                                                # @TODO (fixed): add startsAgeAdjustment (empty string)
-                                                # @TODO (fixed): rename importStartsOpModeDistribution to startsOpModeDistribution
-                                                E.startsOpModeDistribution(E.filename("")),
-                                                E.Starts(E.filename("")),
-                                        )),
-                                E.vehicletypevmt(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.HPMSVtypeYear(self.HPMSyearfile),
-                                                E.monthVMTFraction(self.monthVMTfile),
-                                                E.dayVMTFraction(self.dayVMTfile),
-                                                E.hourVMTFraction(self.hourVMTfile),
-                                        )),
-                                E.hotelling(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                # @TODO (fixed): redo section. Needs "hotellingHoursPerDay", "hotellingHourFraction", hotellingAgeFraction", "hotellingMonthAdjust", "hotellingActivityDistribution" (all empty strings)
-                                                E.hotellingHoursPerDay(E.filename("")),
-                                                E.hotellingHourFraction(E.filename("")),
-                                                E.hotellingAgeFraction(E.filename("")),
-                                                E.hotellingMonthAdjust(E.filename("")),
-                                                E.hotellingActivityDistribution(E.filename("")),
-                                        )),
-                                # @TODO (fixed): add <idle> section: description, parts with totalIdleFraction, idelModelYearGrouping, idleMonthAdjust, idleDayAdjust
-                                E.idle(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(
-                                                E.totalIdleFraction(E.filename("")),
-                                                E.idleModelYearGrouping(E.filename("")),
-                                                E.idleMonthAdjust(E.filename("")),
-                                                E.idleDayAdjust(E.filename("")),
-                                        )),
-                                E.imcoverage(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.IMCoverage(E.filename("")))),
-                                E.onroadretrofit(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        E.parts(E.onRoadRetrofit(E.filename("")))),
-                                E.generic(
-                                        etree.XML('<description><![CDATA[]]></description>',
-                                                  _parser),
-                                        # @TODO (fixed): anytable changed from "agecategory" to "activitytype"
-                                        E.parts(E.anytable(E.tablename("activitytype"),
-                                                           E.filename("")))),
-                                mode="county")
+        elif self.moves_version.startswith("MOVES4") or self.moves_version.startswith("MOVES5"):
+            importfilestring = E.moves(
+                E.importer(
+                    E.filters(
+                        E.geographicselections(geoselect),
+                        timespan,
+                        # E.onroadvehicleselections(vehicle_selection),
+                        onroadvehicleselections,
+                        E.offroadvehicleselections(""),
+                        E.offroadvehiclesccs(""),
+                        roadtypes,
+                        polproc,
+                    ),
+                    databasesel,
+                    E.agedistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.sourceTypeAgeDistribution(self.agefile)),
+                    ),
+                    E.avgspeeddistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.avgSpeedDistribution(self.speedfile)),
+                    ),
+                    E.fuel(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.FuelSupply(self.fuelsupfile),
+                            E.FuelFormulation(self.fuelformfile),
+                            E.FuelUsageFraction(self.fuelusagefile),
+                            E.AVFT(self.avftfile),
+                        ),
+                    ),
+                    # @TODO (fixed): zoneMonthHour is now zonemonthhour and zonemonthhour is now zoneMonthHour
+                    E.zonemonthhour(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.zoneMonthHour(self.metfile)),
+                    ),
+                    # @TODO (fixed): remove rampfraction; not in new MOVES5 import file
+                    # E.rampfraction(
+                    #         etree.XML('<description><![CDATA[]]></description>',
+                    #                   _parser),
+                    #         E.parts(E.roadType(E.filename("")))),
+                    E.roadtypedistribution(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.roadTypeDistribution(self.roadtypefile)),
+                    ),
+                    E.sourcetypepopulation(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.sourceTypeYear(self.sourcetypefile)),
+                    ),
+                    E.starts(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            # @TODO (fixed): add startsPerDayPerVehicle (empty string)
+                            E.startsPerDayPerVehicle(E.filename("")),
+                            E.startsPerDay(E.filename("")),
+                            E.startsHourFraction(E.filename("")),
+                            # E.startsSourceTypeFraction(E.filename("")),
+                            E.startsMonthAdjust(E.filename("")),
+                            E.startsAgeAdjustment(E.filename("")),
+                            # @TODO (fixed): add startsAgeAdjustment (empty string)
+                            # @TODO (fixed): rename importStartsOpModeDistribution to startsOpModeDistribution
+                            E.startsOpModeDistribution(E.filename("")),
+                            E.Starts(E.filename("")),
+                        ),
+                    ),
+                    E.vehicletypevmt(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.HPMSVtypeYear(self.HPMSyearfile),
+                            E.monthVMTFraction(self.monthVMTfile),
+                            E.dayVMTFraction(self.dayVMTfile),
+                            E.hourVMTFraction(self.hourVMTfile),
+                        ),
+                    ),
+                    E.hotelling(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            # @TODO (fixed): redo section. Needs "hotellingHoursPerDay", "hotellingHourFraction", hotellingAgeFraction", "hotellingMonthAdjust", "hotellingActivityDistribution" (all empty strings)
+                            E.hotellingHoursPerDay(E.filename("")),
+                            E.hotellingHourFraction(E.filename("")),
+                            E.hotellingAgeFraction(E.filename("")),
+                            E.hotellingMonthAdjust(E.filename("")),
+                            E.hotellingActivityDistribution(E.filename("")),
+                        ),
+                    ),
+                    # @TODO (fixed): add <idle> section: description, parts with totalIdleFraction, idelModelYearGrouping, idleMonthAdjust, idleDayAdjust
+                    E.idle(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(
+                            E.totalIdleFraction(E.filename("")),
+                            E.idleModelYearGrouping(E.filename("")),
+                            E.idleMonthAdjust(E.filename("")),
+                            E.idleDayAdjust(E.filename("")),
+                        ),
+                    ),
+                    E.imcoverage(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.IMCoverage(E.filename(""))),
+                    ),
+                    E.onroadretrofit(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        E.parts(E.onRoadRetrofit(E.filename(""))),
+                    ),
+                    E.generic(
+                        etree.XML("<description><![CDATA[]]></description>", _parser),
+                        # @TODO (fixed): anytable changed from "agecategory" to "activitytype"
+                        E.parts(E.anytable(E.tablename("activitytype"), E.filename(""))),
+                    ),
+                    mode="county",
                 )
             )
 
         # Transform element tree to string and save to file
 
         # create string from element tree
-        stringout = etree.tostring(importfilestring, pretty_print=True,
-                                   encoding='utf8')
+        stringout = etree.tostring(importfilestring, pretty_print=True, encoding="utf8")
 
         # create import filename using FIPS code, crop, and scenario year
-        self.xmlimport_filename = os.path.join(self.save_path_importfiles,
-                                               '{fips}_import_{year}.mrs'.format(
-                                                       fips=fips, year=self.year))
+        self.xmlimport_filename = os.path.join(
+            self.save_path_importfiles, "{fips}_import_{year}.mrs".format(fips=fips, year=self.year)
+        )
 
         # path for XML runspec files
-        self.runspec_filename = os.path.join(self.save_path_runspecfiles,
-                                             '{fips}_runspec_{year}.mrs'.format(
-                                                     **kvals))
+        self.runspec_filename = os.path.join(
+            self.save_path_runspecfiles, "{fips}_runspec_{year}.mrs".format(**kvals)
+        )
 
         # save string to file
-        with open(self.xmlimport_filename, 'wb') as _fileout:
+        with open(self.xmlimport_filename, "wb") as _fileout:
             _fileout.write(stringout)
             _fileout.close()
 
@@ -1505,17 +1576,21 @@ class MOVES(Module):
         _parser = etree.XMLParser(strip_cdata=False)
 
         # scenario ID for MOVES runs
-        _scenid = "{fips}_{year}_{month}_{day}".format(fips=fips,
-                                                       day=str(self.day),
-                                                       month='_'.join([str(_) for _ in self.month]),
-                                                       year=str(self.year))
+        _scenid = "{fips}_{year}_{month}_{day}".format(
+            fips=fips,
+            day=str(self.day),
+            month="_".join([str(_) for _ in self.month]),
+            year=str(self.year),
+        )
 
         # Create XML element tree for elements with MOVES inputs with CDATA
-        description = etree.XML('<description><![CDATA[]]></description>', _parser)
+        description = etree.XML("<description><![CDATA[]]></description>", _parser)
         internalcontrol = etree.XML(
-                '<internalcontrolstrategy classname="gov.epa.otaq.moves.master.implementation.ghg.'
-                'internalcontrolstrategies.rateofprogress.RateOfProgressStrategy">'
-                '<![CDATA[useParameters    No]]></internalcontrolstrategy>', _parser)
+            '<internalcontrolstrategy classname="gov.epa.otaq.moves.master.implementation.ghg.'
+            'internalcontrolstrategies.rateofprogress.RateOfProgressStrategy">'
+            "<![CDATA[useParameters    No]]></internalcontrolstrategy>",
+            _parser,
+        )
 
         # Create XML element tree for MOVES uncertainty parameters
         uncertaintyparam = etree.Element("uncertaintyparameters", uncertaintymodeenabled="false")
@@ -1551,9 +1626,12 @@ class MOVES(Module):
 
         # Create XML element tree for MOVES input database information
         scaleinput = etree.Element("scaleinputdatabase", servername=self.db_host)
-        scaleinput.set("databasename", "fips_{fips}_{year}_{version}_in".format(fips=fips,
-                                                                                year=self.year,
-                                                                                version=self.moves_version.replace('.', '_')))
+        scaleinput.set(
+            "databasename",
+            "fips_{fips}_{year}_{version}_in".format(
+                fips=fips, year=self.year, version=self.moves_version.replace(".", "_")
+            ),
+        )
         scaleinput.set("description", "")
 
         # Create XML element tree for units used for MOVES output
@@ -1619,18 +1697,20 @@ class MOVES(Module):
         # XML for vehicle type selections
         # combination short-haul truck
 
-        fueltypedesc = {'1': 'Gasoline',
-                        '2': 'Diesel Fuel',
-                        '3': 'Compressed Natural Gas (CNG)',
-                        '9': 'Electricity'}
+        fueltypedesc = {
+            "1": "Gasoline",
+            "2": "Diesel Fuel",
+            "3": "Compressed Natural Gas (CNG)",
+            "9": "Electricity",
+        }
 
         onroadvehicleselections = etree.Element("onroadvehicleselections")
         for fuel_type_id in self.fuel_supply_fuel_type_id:
-
-            vehicle_selection = etree.SubElement(onroadvehicleselections,
-                                                 "onroadvehicleselection", fueltypeid=fuel_type_id)
+            vehicle_selection = etree.SubElement(
+                onroadvehicleselections, "onroadvehicleselection", fueltypeid=fuel_type_id
+            )
             vehicle_selection.set("fueltypedesc", fueltypedesc[fuel_type_id])
-            vehicle_selection.set("sourcetypeid", '61')
+            vehicle_selection.set("sourcetypeid", "61")
             vehicle_selection.set("sourcetypename", "Combination Short-haul Truck")
 
         # Create XML element tree for MOVES pollutant processes
@@ -1646,9 +1726,9 @@ class MOVES(Module):
         for _pol in self.polname:
             # loop through all processes associated with each pollutant
             for _proc in self.prockey[_pol]:
-                pollutant = etree.SubElement(polproc,
-                                             "pollutantprocessassociation",
-                                             pollutantkey=self.polkey[_pol])
+                pollutant = etree.SubElement(
+                    polproc, "pollutantprocessassociation", pollutantkey=self.polkey[_pol]
+                )
                 pollutant.set("pollutantname", self.polname[_pol])
                 pollutant.set("processkey", _proc)
                 pollutant.set("processname", self.procname[_proc])
@@ -1669,104 +1749,100 @@ class MOVES(Module):
         inputdatabase.set("description", "")
 
         # Create full element tree for MOVES import file
-        if self.moves_version.startswith('MOVES3'):
-            _runspecfilestring = (
-                E.runspec(
-                        description,
-                        E.models(etree.Element("model", value="ONROAD")),
-                        etree.Element("modelscale", value="Rates"),
-                        etree.Element("modeldomain", value="SINGLE"),
-                        E.geographicselections(geoselect),
-                        timespan,
-                        #E.onroadvehicleselections(vehicle_selection),
-                        onroadvehicleselections,
-                        E.offroadvehicleselections(""),
-                        E.offroadvehiclesccs(""),
-                        roadtypes,
-                        polproc,
-                        E.databaseselections(""),
-                        E.internalcontrolstrategies(internalcontrol),
-                        inputdatabase,
-                        uncertaintyparam,
-                        etree.Element("geographicoutputdetail", description="LINK"),
-                        outputemissions,
-                        outputdatabase,
-                        etree.Element("outputtimestep", value="Hour"),
-                        etree.Element("outputvmtdata", value="true"),
-                        etree.Element("outputsho", value="false"),
-                        etree.Element("outputsh", value="false"),
-                        etree.Element("outputshp", value="false"),
-                        etree.Element("outputshidling", value="true"),
-                        etree.Element("outputstarts", value="true"),
-                        etree.Element("outputpopulation", value="true"),
-                        scaleinput,
-                        etree.Element("pmsize", value="0"),
-                        outputfactors,
-                        E.savedata(""),
-                        E.donotexecute(""),
-                        gendata,
-                        etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
-                        lookupflag,
-                        version=self.moves_version)
+        if self.moves_version.startswith("MOVES3"):
+            _runspecfilestring = E.runspec(
+                description,
+                E.models(etree.Element("model", value="ONROAD")),
+                etree.Element("modelscale", value="Rates"),
+                etree.Element("modeldomain", value="SINGLE"),
+                E.geographicselections(geoselect),
+                timespan,
+                # E.onroadvehicleselections(vehicle_selection),
+                onroadvehicleselections,
+                E.offroadvehicleselections(""),
+                E.offroadvehiclesccs(""),
+                roadtypes,
+                polproc,
+                E.databaseselections(""),
+                E.internalcontrolstrategies(internalcontrol),
+                inputdatabase,
+                uncertaintyparam,
+                etree.Element("geographicoutputdetail", description="LINK"),
+                outputemissions,
+                outputdatabase,
+                etree.Element("outputtimestep", value="Hour"),
+                etree.Element("outputvmtdata", value="true"),
+                etree.Element("outputsho", value="false"),
+                etree.Element("outputsh", value="false"),
+                etree.Element("outputshp", value="false"),
+                etree.Element("outputshidling", value="true"),
+                etree.Element("outputstarts", value="true"),
+                etree.Element("outputpopulation", value="true"),
+                scaleinput,
+                etree.Element("pmsize", value="0"),
+                outputfactors,
+                E.savedata(""),
+                E.donotexecute(""),
+                gendata,
+                etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
+                lookupflag,
+                version=self.moves_version,
             )
-        elif self.moves_version.startswith('MOVES4') or self.moves_version.startswith('MOVES5'):
-            _runspecfilestring = (
-                E.runspec(
-                        description,
-                        E.models(etree.Element("model", value="ONROAD")),
-                        etree.Element("modelscale", value="Rates"),
-                        etree.Element("modeldomain", value="SINGLE"),
-                        E.geographicselections(geoselect),
-                        timespan,
-                        #E.onroadvehicleselections(vehicle_selection),
-                        onroadvehicleselections,
-                        E.offroadvehicleselections(""),
-                        E.offroadvehiclesccs(""),
-                        roadtypes,
-                        polproc,
-                        E.databaseselections(""),
-                        E.internalcontrolstrategies(""),
-                        inputdatabase,
-                        uncertaintyparam,
-                        etree.Element("geographicoutputdetail", description="LINK"),
-                        outputemissions,
-                        outputdatabase,
-                        etree.Element("outputtimestep", value="Hour"),
-                        etree.Element("outputvmtdata", value="true"),
-                        etree.Element("outputsho", value="false"),
-                        etree.Element("outputsh", value="false"),
-                        etree.Element("outputshp", value="false"),
-                        etree.Element("outputshidling", value="true"),
-                        etree.Element("outputstarts", value="true"),
-                        etree.Element("outputpopulation", value="true"),
-                        scaleinput,
-                        etree.Element("pmsize", value="0"),
-                        outputfactors,
-                        E.savedata(""),
-                        E.donotexecute(""),
-                        gendata,
-                        etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
-                        lookupflag,
-                        skip_dom_val,
-                        # @TODO (fixed): add <skipdomaindatabasevalidation selected="false"/> element here
-                        version=self.moves_version)
+        elif self.moves_version.startswith("MOVES4") or self.moves_version.startswith("MOVES5"):
+            _runspecfilestring = E.runspec(
+                description,
+                E.models(etree.Element("model", value="ONROAD")),
+                etree.Element("modelscale", value="Rates"),
+                etree.Element("modeldomain", value="SINGLE"),
+                E.geographicselections(geoselect),
+                timespan,
+                # E.onroadvehicleselections(vehicle_selection),
+                onroadvehicleselections,
+                E.offroadvehicleselections(""),
+                E.offroadvehiclesccs(""),
+                roadtypes,
+                polproc,
+                E.databaseselections(""),
+                E.internalcontrolstrategies(""),
+                inputdatabase,
+                uncertaintyparam,
+                etree.Element("geographicoutputdetail", description="LINK"),
+                outputemissions,
+                outputdatabase,
+                etree.Element("outputtimestep", value="Hour"),
+                etree.Element("outputvmtdata", value="true"),
+                etree.Element("outputsho", value="false"),
+                etree.Element("outputsh", value="false"),
+                etree.Element("outputshp", value="false"),
+                etree.Element("outputshidling", value="true"),
+                etree.Element("outputstarts", value="true"),
+                etree.Element("outputpopulation", value="true"),
+                scaleinput,
+                etree.Element("pmsize", value="0"),
+                outputfactors,
+                E.savedata(""),
+                E.donotexecute(""),
+                gendata,
+                etree.SubElement(gendata, "donotperformfinalaggregation", selected="false"),
+                lookupflag,
+                skip_dom_val,
+                # @TODO (fixed): add <skipdomaindatabasevalidation selected="false"/> element here
+                version=self.moves_version,
             )
-
-
 
         # Transform element tree to string and save to file
 
         # create string from element tree
-        _stringout = etree.tostring(_runspecfilestring, pretty_print=True,
-                                    encoding='utf8')
+        _stringout = etree.tostring(_runspecfilestring, pretty_print=True, encoding="utf8")
 
         # create filename for runspec file using FIPS and scenario year
-        self.runspec_filename = os.path.join(self.save_path_runspecfiles,
-                                             '{fips}_runspec_{year}.mrs'.format(
-                                                     fips=fips, year=self.year))
+        self.runspec_filename = os.path.join(
+            self.save_path_runspecfiles,
+            "{fips}_runspec_{year}.mrs".format(fips=fips, year=self.year),
+        )
 
         # save string to file
-        with open(self.runspec_filename, 'wb') as _fileout:
+        with open(self.runspec_filename, "wb") as _fileout:
             _fileout.write(_stringout)
             _fileout.close()
 
@@ -1775,12 +1851,11 @@ class MOVES(Module):
         :return: scenario id
         """
 
-        scenario_id = "{fips}_{year}_{month}_{day}".format(fips=fips,
-                                                           day=day,
-                                                           month='_'.join([str(_) for _ in month]),
-                                                           year=year)
+        scenario_id = "{fips}_{year}_{month}_{day}".format(
+            fips=fips, day=day, month="_".join([str(_) for _ in month]), year=year
+        )
 
-        return(scenario_id)
+        return scenario_id
 
     def _get_cached_results(self):
         """
@@ -1789,9 +1864,14 @@ class MOVES(Module):
         """
 
         def _get_results_fips(moves_output_db, year, month, day):
-           # @TODO: this should probably also look at ratepervehicle to make sure each FIPS is in both tables
+            # @TODO: this should probably also look at ratepervehicle to make sure each FIPS is in both tables
 
-            kvals = {'moves_output_db': moves_output_db, 'year': year, 'month': tuple(month), 'day': day}
+            kvals = {
+                "moves_output_db": moves_output_db,
+                "year": year,
+                "month": tuple(month),
+                "day": day,
+            }
             _results_fips_sql = """SELECT DISTINCT LEFT(dist_table.MOVESScenarioID, 5) AS fips
                 FROM {moves_output_db}.rateperdistance AS dist_table
                   INNER JOIN (SELECT DISTINCT LEFT(dist.MOVESScenarioID, 5) AS fips, MOVESRunID
@@ -1808,16 +1888,15 @@ class MOVES(Module):
 
             _fips_cached = pd.read_sql(_results_fips_sql, self.conn)
 
-            return(_fips_cached)
+            return _fips_cached
 
-        _results =_get_results_fips(moves_output_db=self.moves_output_db,
-                                    year=self.year,
-                                    month=self.month,
-                                    day=self.day)
-   
+        _results = _get_results_fips(
+            moves_output_db=self.moves_output_db, year=self.year, month=self.month, day=self.day
+        )
+
         _fips_cached = _results.fips.tolist()
 
-        return(_fips_cached)
+        return _fips_cached
 
     def postprocess(self):
         """
@@ -1828,44 +1907,41 @@ class MOVES(Module):
         :return: dataframe of postprocessed transportation emissions
         """
 
-        LOGGER.info('Retrieving MOVES output')
+        LOGGER.info("Retrieving MOVES output")
 
         # list of MOVES output tables that are currently used for
         # transportation
-        _moves_table_list = ['ratePerDistance', 'ratePerVehicle']
+        _moves_table_list = ["ratePerDistance", "ratePerVehicle"]
 
         # initialize kvals dict for SQL statement formatting
         kvals = dict()
-        kvals['moves_database'] = self.moves_database
-        kvals['moves_output_db'] = self.moves_output_db
-        kvals['source_type_id'] = self.source_type_id
-        kvals['year'] = self.year
-        kvals['month'] = ', '.join([str(_) for _ in self.month])
-        kvals['day'] = self.day
+        kvals["moves_database"] = self.moves_database
+        kvals["moves_output_db"] = self.moves_output_db
+        kvals["source_type_id"] = self.source_type_id
+        kvals["year"] = self.year
+        kvals["month"] = ", ".join([str(_) for _ in self.month])
+        kvals["day"] = self.day
 
         # some minor changes to the SQL tables in _moves_table_list
         _moves_cursor = self.conn.cursor()
 
         for _table in _moves_table_list:
-
             _add_fips_sql = """ALTER TABLE {moves_output_db}.{t}
-                                ADD COLUMN fips char(5);""".format(t=_table,
-                                                                   **kvals)
+                                ADD COLUMN fips char(5);""".format(t=_table, **kvals)
 
             _update_fips_sql = """UPDATE {moves_output_db}.{t}
-                    SET fips = LEFT(MOVESScenarioID, 5);""".format(t=_table,
-                                                                   **kvals)
+                    SET fips = LEFT(MOVESScenarioID, 5);""".format(t=_table, **kvals)
 
             # test if the table already has a fips column; if so, go to update
             # table; if not, create the fips column
             try:
-                LOGGER.info('Adding fips column to {t}'.format(t=_table))
+                LOGGER.info("Adding fips column to {t}".format(t=_table))
                 _moves_cursor.execute(_add_fips_sql)
 
             except pymysql.err.OperationalError:
                 pass
 
-            LOGGER.info('Updating fips column to {t}'.format(t=_table))
+            LOGGER.info("Updating fips column to {t}".format(t=_table))
             _moves_cursor.execute(_update_fips_sql)
 
         # close cursor after updating both tables
@@ -1913,13 +1989,13 @@ class MOVES(Module):
 
         # create a filter for relevant rateperdistance rows based on which
         # fips in rateperdistance are equal to fips in the moves run list
-        _rateperdistance_filter = _rateperdistance_all.fips.isin(
-                self.moves_run_list.MOVES_run_fips)
+        _rateperdistance_filter = _rateperdistance_all.fips.isin(self.moves_run_list.MOVES_run_fips)
 
         # filter down the large rateperdistance table into just the rows
         # that are relevant to this run
-        _rateperdistance = _rateperdistance_all.loc[_rateperdistance_filter,
-                                                    _rateperdistance_all.columns]
+        _rateperdistance = _rateperdistance_all.loc[
+            _rateperdistance_filter, _rateperdistance_all.columns
+        ]
 
         # pull in rows from the ratePerVehicle table, subsetting to grab
         # only the most recent runs for each FIPS in the able
@@ -1951,18 +2027,18 @@ class MOVES(Module):
 
         _ratepervehicle_all = pd.read_sql(_ratepervehicle_table_sql, self.conn)
 
-        _ratepervehicle_filter = _ratepervehicle_all.fips.isin(
-                self.moves_run_list.MOVES_run_fips)
+        _ratepervehicle_filter = _ratepervehicle_all.fips.isin(self.moves_run_list.MOVES_run_fips)
 
-        _ratepervehicle = _ratepervehicle_all.loc[_ratepervehicle_filter,
-                                                  _ratepervehicle_all.columns]
+        _ratepervehicle = _ratepervehicle_all.loc[
+            _ratepervehicle_filter, _ratepervehicle_all.columns
+        ]
 
-        LOGGER.debug('Postprocessing MOVES output')
+        LOGGER.debug("Postprocessing MOVES output")
 
         # add state column to both tables by pulling out first two digits of
         #  MOVESScenarioID
-        _rateperdistance['state'] = _rateperdistance.loc[:, 'fips'].str[:2]
-        _ratepervehicle['state'] = _ratepervehicle.loc[:, 'fips'].str[:2]
+        _rateperdistance["state"] = _rateperdistance.loc[:, "fips"].str[:2]
+        _ratepervehicle["state"] = _ratepervehicle.loc[:, "fips"].str[:2]
 
         # create the average speed table that will be used in calculating
         # the average emissions rate per distance
@@ -1981,18 +2057,17 @@ class MOVES(Module):
         # pull the average speed table in from the database and merge with
         # the VMT fraction table created during MOVES setup
         # @NOTE the roadTypeID column in roadtypevmt needs to be int64 type
-        _averagespeed = pd.read_sql(_averagespeed_query,
-                                    self.conn).merge(self.roadtypevmt, on='roadTypeID')
+        _averagespeed = pd.read_sql(_averagespeed_query, self.conn).merge(
+            self.roadtypevmt, on="roadTypeID"
+        )
 
         # Calculate total running emissions per trip (by pollutant)
         # Equal to sum(ratePerDistance * vmtfrac_in_speedbin[i] * vmt)
         # for all speed bins, pollutant processes, day types, hours,
         # and road types
-        _join_dist_avgspd = _rateperdistance.merge(_averagespeed,
-                                                   on=('roadTypeID',
-                                                       'avgSpeedBinID',
-                                                       'dayID',
-                                                       'hourID'))
+        _join_dist_avgspd = _rateperdistance.merge(
+            _averagespeed, on=("roadTypeID", "avgSpeedBinID", "dayID", "hourID")
+        )
 
         # get dayvmtfraction
         _dayvmtfraction_sql = """SELECT monthID,
@@ -2006,99 +2081,88 @@ class MOVES(Module):
 
         _dayvmtfraction = pd.read_sql(_dayvmtfraction_sql, self.conn)
 
-        _join_dist_avgspd = _join_dist_avgspd.merge(_dayvmtfraction,
-                                                    on=('monthID',
-                                                        'dayID',
-                                                        'roadTypeID'))
+        _join_dist_avgspd = _join_dist_avgspd.merge(
+            _dayvmtfraction, on=("monthID", "dayID", "roadTypeID")
+        )
 
         # calculate non-summed rate per distance
         # Use direct column operations instead of eval() — more robust with mixed types
-        _join_dist_avgspd['averageRatePerDistance'] = (
-            pd.to_numeric(_join_dist_avgspd['ratePerDistance'], errors='coerce') *
-            pd.to_numeric(_join_dist_avgspd['avgSpeedFraction'], errors='coerce') *
-            pd.to_numeric(_join_dist_avgspd['roadTypeVMTFraction'], errors='coerce') *
-            pd.to_numeric(_join_dist_avgspd['dayVMTFraction'], errors='coerce')
+        _join_dist_avgspd["averageRatePerDistance"] = (
+            pd.to_numeric(_join_dist_avgspd["ratePerDistance"], errors="coerce")
+            * pd.to_numeric(_join_dist_avgspd["avgSpeedFraction"], errors="coerce")
+            * pd.to_numeric(_join_dist_avgspd["roadTypeVMTFraction"], errors="coerce")
+            * pd.to_numeric(_join_dist_avgspd["dayVMTFraction"], errors="coerce")
         )
 
         # calculate final pollutant rates per distance by grouping and
         # summing rates per distance over pollutant processes, hours,
         # speed bins, and road types to get one rate per
         # fips-month-day-pollutant combo
-        _avgRateDist = _join_dist_avgspd.groupby(['fips',
-                                                  'state',
-                                                  'yearID',
-                                                  'monthID',
-                                                  'dayID',
-                                                  'pollutantID'],
-                                                 as_index=False).sum()[[
-                                                                        'fips',
-                                                                        'state',
-                                                                        'pollutantID',
-                                                                        'averageRatePerDistance']]
+        _avgRateDist = _join_dist_avgspd.groupby(
+            ["fips", "state", "yearID", "monthID", "dayID", "pollutantID"], as_index=False
+        ).sum()[["fips", "state", "pollutantID", "averageRatePerDistance"]]
 
         # @TODO: not sure the combination and weighting above is correct. See IRA queries.
         # average over all times
-        #_avgRateDist = _avgRateDist.groupby(['fips', 'state', 'pollutantID'], as_index=False).mean()
+        # _avgRateDist = _avgRateDist.groupby(['fips', 'state', 'pollutantID'], as_index=False).mean()
 
         # merge with the pollutant names dataframe
-        _avgRateDist = _avgRateDist.merge(self.pollutant_names, how='inner',
-                                          on='pollutantID')
+        _avgRateDist = _avgRateDist.merge(self.pollutant_names, how="inner", on="pollutantID")
 
         _save_rates = False
         if _save_rates:
             _fips = _avgRateDist.fips.unique()[0]
-            _rates_fname = f'rate_per_distance_{_fips}.csv'
-            _rates_fpath = os.path.join(self.config.get('project_path'), _rates_fname)
+            _rates_fname = f"rate_per_distance_{_fips}.csv"
+            _rates_fpath = os.path.join(self.config.get("project_path"), _rates_fname)
             _avgRateDist.to_csv(_rates_fpath, index=False)
         # merge the truck capacity numbers with the rate per distance merge
         # to prep for calculating number of trips
-        _run_emissions = _avgRateDist.merge(self.prod_moves_runs[['MOVES_run_fips',
-                                                                  'state',
-                                                                  'region_production',
-                                                                  'region_destination',
-                                                                  'feedstock',
-                                                                  'tillage_type',
-                                                                  'feedstock_amount',
-                                                                  'source_lon',
-                                                                  'source_lat',
-                                                                  'destination_lon',
-                                                                  'destination_lat']], how='left',
-                                            left_on=['fips', 'state'],
-                                            right_on=['MOVES_run_fips',
-                                                      'state']).merge(
-                self.truck_capacity[['feedstock',
-                                     'truck_capacity']],
-                how='left',
-                on='feedstock')
+        _run_emissions = _avgRateDist.merge(
+            self.prod_moves_runs[
+                [
+                    "MOVES_run_fips",
+                    "state",
+                    "region_production",
+                    "region_destination",
+                    "feedstock",
+                    "tillage_type",
+                    "feedstock_amount",
+                    "source_lon",
+                    "source_lat",
+                    "destination_lon",
+                    "destination_lat",
+                ]
+            ],
+            how="left",
+            left_on=["fips", "state"],
+            right_on=["MOVES_run_fips", "state"],
+        ).merge(self.truck_capacity[["feedstock", "truck_capacity"]], how="left", on="feedstock")
 
         # get routing information between each unique region_production and
         # region_destination pair
-        _routes = _run_emissions[['source_lon',
-                                  'source_lat',
-                                  'destination_lon',
-                                  'destination_lat']].drop_duplicates()
+        _routes = _run_emissions[
+            ["source_lon", "source_lat", "destination_lon", "destination_lat"]
+        ].drop_duplicates()
 
         # if routing engine is specified, use it to get the route (fips and
         # vmt) for each unique region_production and region_destination pair
         if self.router is not None:
-
             # initialize holder for all routes
             _vmt_by_county_all_routes = pd.DataFrame()
 
             # loop through all routes
             for i in np.arange(_routes.shape[0]):
-
                 # use the routing engine to get a route
-                _vmt_by_county = self.router.get_route(start=(_routes.source_lon.iloc[i],
-                                                              _routes.source_lat.iloc[i]),
-                                                       end=(_routes.destination_lon.iloc[i],
-                                                            _routes.destination_lat.iloc[i]))
+                _vmt_by_county = self.router.get_route(
+                    start=(_routes.source_lon.iloc[i], _routes.source_lat.iloc[i]),
+                    end=(_routes.destination_lon.iloc[i], _routes.destination_lat.iloc[i]),
+                )
 
                 # add identifier columns for later merging with _run_emissions
-                _vmt_by_county['source_lon'] = _routes.source_lon.iloc[i]
-                _vmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
-                _vmt_by_county['destination_lon'] = _routes.destination_lon.iloc[i]
-                _vmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
+                _vmt_by_county["source_lon"] = _routes.source_lon.iloc[i]
+                _vmt_by_county["source_lat"] = _routes.source_lat.iloc[i]
+                _vmt_by_county["destination_lon"] = _routes.destination_lon.iloc[i]
+                _vmt_by_county["destination_lat"] = _routes.destination_lat.iloc[i]
 
                 # either create the data frame to store all routes,
                 # or append the current route
@@ -2114,19 +2178,18 @@ class MOVES(Module):
 
             # after the loop through all routes is complete, merge the data
             # frame containing all routes with _run_emissions
-            _run_emissions = _run_emissions.merge(_vmt_by_county_all_routes,
-                                                  how='left',
-                                                  on=['source_lon',
-                                                      'source_lat',
-                                                      'destination_lon',
-                                                      'destination_lat'])
+            _run_emissions = _run_emissions.merge(
+                _vmt_by_county_all_routes,
+                how="left",
+                on=["source_lon", "source_lat", "destination_lon", "destination_lat"],
+            )
 
         else:
             # if user has specified NOT to use the router engine, use the
             # user-specified vmt and fill the region_transportation column
             # with values from the region_production column
-            _run_emissions['region_transportation'] = _run_emissions['region_production']
-            _run_emissions['vmt'] = self.vmt_short_haul
+            _run_emissions["region_transportation"] = _run_emissions["region_production"]
+            _run_emissions["vmt"] = self.vmt_short_haul
 
         # evaluate running emissions
         # number of trips between farm and biorefinery is feedstock_amount /
@@ -2136,98 +2199,129 @@ class MOVES(Module):
         # biorefinery has no backhauling, hence the - 1.
         # np.maximum takes the pairwise maximum of each element in a series and
         # 1. The standard Python max() will not work here.
-        _run_emissions['trips'] = np.maximum((2 * _run_emissions.feedstock_amount / _run_emissions.truck_capacity - 1), 1)
+        _run_emissions["trips"] = np.maximum(
+            (2 * _run_emissions.feedstock_amount / _run_emissions.truck_capacity - 1), 1
+        )
 
-        _run_emissions['pollutant_amount'] = (
-            pd.to_numeric(_run_emissions['averageRatePerDistance'], errors='coerce') *
-            pd.to_numeric(_run_emissions['vmt'], errors='coerce') *
-            pd.to_numeric(_run_emissions['trips'], errors='coerce')
+        _run_emissions["pollutant_amount"] = (
+            pd.to_numeric(_run_emissions["averageRatePerDistance"], errors="coerce")
+            * pd.to_numeric(_run_emissions["vmt"], errors="coerce")
+            * pd.to_numeric(_run_emissions["trips"], errors="coerce")
         )
 
         # start and hotelling emissions
-        _avgRateVeh = _ratepervehicle.groupby(['fips', 'state', 'yearID',
-                                               'monthID', 'dayID',
-                                               'pollutantID'],
-                                              as_index=False).sum()[['fips', 'state', 'pollutantID', 'ratePerVehicle']]
+        _avgRateVeh = _ratepervehicle.groupby(
+            ["fips", "state", "yearID", "monthID", "dayID", "pollutantID"], as_index=False
+        ).sum()[["fips", "state", "pollutantID", "ratePerVehicle"]]
 
-        _avgRateVeh = _avgRateVeh.merge(self.pollutant_names, how='inner',
-                                        on='pollutantID')
+        _avgRateVeh = _avgRateVeh.merge(self.pollutant_names, how="inner", on="pollutantID")
 
         # merge raw moves output with production data and truck capacities
-        _start_hotel_emissions = _avgRateVeh.merge(self.prod_moves_runs[['MOVES_run_fips',
-                                                                         'state',
-                                                                         'region_production',
-                                                                         'region_destination',
-                                                                         'tillage_type',
-                                                                         'feedstock',
-                                                                         'feedstock_measure',
-                                                                         'feedstock_amount',
-                                                                         'source_lon',
-                                                                         'source_lat',
-                                                                         'destination_lon',
-                                                                         'destination_lat']],
-                                                   how='left',
-                                                   left_on=['fips', 'state'],
-                                                   right_on=['MOVES_run_fips',
-                                                             'state']).merge(
-                self.truck_capacity[['feedstock', 'truck_capacity']],
-                how='left',
-                on='feedstock')
+        _start_hotel_emissions = _avgRateVeh.merge(
+            self.prod_moves_runs[
+                [
+                    "MOVES_run_fips",
+                    "state",
+                    "region_production",
+                    "region_destination",
+                    "tillage_type",
+                    "feedstock",
+                    "feedstock_measure",
+                    "feedstock_amount",
+                    "source_lon",
+                    "source_lat",
+                    "destination_lon",
+                    "destination_lat",
+                ]
+            ],
+            how="left",
+            left_on=["fips", "state"],
+            right_on=["MOVES_run_fips", "state"],
+        ).merge(self.truck_capacity[["feedstock", "truck_capacity"]], how="left", on="feedstock")
 
         # calculate start and hotelling emissions accounting for backhauling
         # trips including backhauling is 2N - 1 where N is the number of
         # trips from farm to biorefinery
-        _start_hotel_emissions['trips'] = np.maximum((2 * _start_hotel_emissions.feedstock_amount / _start_hotel_emissions.truck_capacity - 1), 1)
-
-        _start_hotel_emissions['pollutant_amount'] = (
-            pd.to_numeric(_start_hotel_emissions['ratePerVehicle'], errors='coerce') *
-            pd.to_numeric(_start_hotel_emissions['trips'], errors='coerce')
+        _start_hotel_emissions["trips"] = np.maximum(
+            (
+                2 * _start_hotel_emissions.feedstock_amount / _start_hotel_emissions.truck_capacity
+                - 1
+            ),
+            1,
         )
 
+        _start_hotel_emissions["pollutant_amount"] = pd.to_numeric(
+            _start_hotel_emissions["ratePerVehicle"], errors="coerce"
+        ) * pd.to_numeric(_start_hotel_emissions["trips"], errors="coerce")
+
         # append the run emissions with the start and hotelling emissions
-        _transportation_emissions = pd.concat([_run_emissions[['region_production',
-                                                               'region_destination',
-                                                               'feedstock',
-                                                               'tillage_type',
-                                                               'region_transportation',
-                                                               'pollutant',
-                                                               'pollutant_amount',
-                                                               'source_lon',
-                                                               'source_lat',
-                                                               'destination_lon',
-                                                               'destination_lat']],
-                                               _start_hotel_emissions[['region_production',
-                                                                       'region_destination',
-                                                                       'feedstock',
-                                                                       'tillage_type',
-                                                                       'pollutant',
-                                                                       'pollutant_amount',
-                                                                       'source_lon',
-                                                                       'source_lat',
-                                                                       'destination_lon',
-                                                                       'destination_lat']]],
-                                              ignore_index=True, sort=True)
+        _transportation_emissions = pd.concat(
+            [
+                _run_emissions[
+                    [
+                        "region_production",
+                        "region_destination",
+                        "feedstock",
+                        "tillage_type",
+                        "region_transportation",
+                        "pollutant",
+                        "pollutant_amount",
+                        "source_lon",
+                        "source_lat",
+                        "destination_lon",
+                        "destination_lat",
+                    ]
+                ],
+                _start_hotel_emissions[
+                    [
+                        "region_production",
+                        "region_destination",
+                        "feedstock",
+                        "tillage_type",
+                        "pollutant",
+                        "pollutant_amount",
+                        "source_lon",
+                        "source_lat",
+                        "destination_lon",
+                        "destination_lat",
+                    ]
+                ],
+            ],
+            ignore_index=True,
+            sort=True,
+        )
 
         # converts pollutant names to all lower case to match the output of
         # other modules
-        _transportation_emissions['pollutant'] = _transportation_emissions[
-            'pollutant'].str.lower()
+        _transportation_emissions["pollutant"] = _transportation_emissions["pollutant"].str.lower()
 
         # add activity and module columns
-        _transportation_emissions['activity'] = 'transportation'
-        _transportation_emissions['module'] = 'moves'
+        _transportation_emissions["activity"] = "transportation"
+        _transportation_emissions["module"] = "moves"
 
         # convert pollutant amounts from grams (calculated by MOVES) to pounds
-        _transportation_emissions['pollutant_amount'] = \
-            _transportation_emissions['pollutant_amount'] * \
-            self.conversion_factors['gram']['pound']
+        _transportation_emissions["pollutant_amount"] = (
+            _transportation_emissions["pollutant_amount"] * self.conversion_factors["gram"]["pound"]
+        )
 
         # sum up by pollutant type for final module output
         _transportation_emissions = _transportation_emissions.groupby(
-                ['region_production', 'region_destination', 'feedstock',
-                 'tillage_type', 'module', 'activity', 'region_transportation',
-                 'pollutant', 'source_lon', 'source_lat', 'destination_lon', 'destination_lat'],
-                as_index=False).sum()
+            [
+                "region_production",
+                "region_destination",
+                "feedstock",
+                "tillage_type",
+                "module",
+                "activity",
+                "region_transportation",
+                "pollutant",
+                "source_lon",
+                "source_lat",
+                "destination_lon",
+                "destination_lat",
+            ],
+            as_index=False,
+        ).sum()
 
         return _transportation_emissions
 
@@ -2263,100 +2357,94 @@ class MOVES(Module):
 
         # ── Mirror the frame-building section of run() ───────────────────────
         _region_fips_map = self.region_fips_map.copy()
-        _region_fips_map['state'] = _region_fips_map.fips.str[0:2]
+        _region_fips_map["state"] = _region_fips_map.fips.str[0:2]
 
         _prod_merge = self.production[
             self.production.feedstock_measure == self.feedstock_measure_type
-        ].merge(_region_fips_map, left_on='region_production', right_on='region')
+        ].merge(_region_fips_map, left_on="region_production", right_on="region")
 
         _prod_by_fips_feed = _prod_merge.groupby(
-            ['fips', 'state', 'feedstock'], as_index=False
+            ["fips", "state", "feedstock"], as_index=False
         ).sum()
 
         # Apply on-farm feedstock loss factors
         _lf = self.feedstock_loss_factors.copy()
         # Ensure numeric types — pandas 2.x+ requires explicit conversion for eval
-        _lf['dry_matter_loss'] = pd.to_numeric(_lf['dry_matter_loss'], errors='coerce').fillna(0.0)
-        _lf['dry_matter_remaining'] = 1.0 - _lf['dry_matter_loss']
-        _lf_fg = _lf[_lf.supply_chain_stage.isin(['farm gate'])]
+        _lf["dry_matter_loss"] = pd.to_numeric(_lf["dry_matter_loss"], errors="coerce").fillna(0.0)
+        _lf["dry_matter_remaining"] = 1.0 - _lf["dry_matter_loss"]
+        _lf_fg = _lf[_lf.supply_chain_stage.isin(["farm gate"])]
         _lf_agg = (
-            _lf_fg.groupby('feedstock', as_index=False)['dry_matter_remaining']
+            _lf_fg.groupby("feedstock", as_index=False)["dry_matter_remaining"]
             .prod(numeric_only=True)
-            .rename(columns={'dry_matter_remaining': 'dry_matter_remaining'})
+            .rename(columns={"dry_matter_remaining": "dry_matter_remaining"})
         )
-        _prod_by_fips_feed = _prod_by_fips_feed.merge(_lf_agg, on='feedstock', how='left')
-        _prod_by_fips_feed['dry_matter_remaining'] = (
-            _prod_by_fips_feed['dry_matter_remaining'].fillna(1.0)
+        _prod_by_fips_feed = _prod_by_fips_feed.merge(_lf_agg, on="feedstock", how="left")
+        _prod_by_fips_feed["dry_matter_remaining"] = _prod_by_fips_feed[
+            "dry_matter_remaining"
+        ].fillna(1.0)
+        _prod_by_fips_feed["feedstock_amount"] = (
+            pd.to_numeric(_prod_by_fips_feed["feedstock_amount"], errors="coerce")
+            * _prod_by_fips_feed["dry_matter_remaining"]
         )
-        _prod_by_fips_feed['feedstock_amount'] = (
-            pd.to_numeric(_prod_by_fips_feed['feedstock_amount'], errors='coerce') *
-            _prod_by_fips_feed['dry_matter_remaining']
-        )
-        del _prod_by_fips_feed['dry_matter_remaining']
+        del _prod_by_fips_feed["dry_matter_remaining"]
 
-        _max_amts_feed = _prod_by_fips_feed.groupby(
-            ['state', 'feedstock'], as_index=False
-        ).max()
+        _max_amts_feed = _prod_by_fips_feed.groupby(["state", "feedstock"], as_index=False).max()
 
         if self.moves_by_state:
-            _amts_by_fips = _prod_by_fips_feed.groupby(
-                ['fips', 'state'], as_index=False
-            ).sum()
-            _max_amts = _amts_by_fips.groupby('state', as_index=False).max()
-            _run_list = _max_amts[['fips', 'state']].drop_duplicates()
+            _amts_by_fips = _prod_by_fips_feed.groupby(["fips", "state"], as_index=False).sum()
+            _max_amts = _amts_by_fips.groupby("state", as_index=False).max()
+            _run_list = _max_amts[["fips", "state"]].drop_duplicates()
         elif self.moves_by_state_and_feedstock:
-            _run_list = _max_amts_feed[['fips', 'state', 'feedstock']].drop_duplicates()
+            _run_list = _max_amts_feed[["fips", "state", "feedstock"]].drop_duplicates()
         else:
-            _run_list = _prod_merge[['fips', 'state']].drop_duplicates()
+            _run_list = _prod_merge[["fips", "state"]].drop_duplicates()
 
         _run_list = _run_list.copy()
         _run_list.rename(
-            columns={'fips': 'MOVES_run_fips', 'state': 'MOVES_run_state'},
+            columns={"fips": "MOVES_run_fips", "state": "MOVES_run_state"},
             inplace=True,
         )
 
         # ── Compute metadata ─────────────────────────────────────────────────
-        fips_sorted = sorted(_run_list['MOVES_run_fips'].dropna().unique().tolist())
-        fips_str = '\n'.join(str(f).zfill(5) for f in fips_sorted)
+        fips_sorted = sorted(_run_list["MOVES_run_fips"].dropna().unique().tolist())
+        fips_str = "\n".join(str(f).zfill(5) for f in fips_sorted)
         fips_sha256 = hashlib.sha256(fips_str.encode()).hexdigest()
 
         meta = {
-            'N': len(fips_sorted),
-            'moves_by_state': bool(self.moves_by_state),
-            'moves_by_state_and_feedstock': bool(self.moves_by_state_and_feedstock),
-            'feedstock_measure_type': self.feedstock_measure_type,
-            'fips_sha256': fips_sha256,
-            'source': 'FPEAM.MOVES.export_operational_request_frame',
+            "N": len(fips_sorted),
+            "moves_by_state": bool(self.moves_by_state),
+            "moves_by_state_and_feedstock": bool(self.moves_by_state_and_feedstock),
+            "feedstock_measure_type": self.feedstock_measure_type,
+            "fips_sha256": fips_sha256,
+            "source": "FPEAM.MOVES.export_operational_request_frame",
         }
 
-        LOGGER.info('Operational MOVES request frame: N=%d FIPS, sha256=%s',
-                    meta['N'], fips_sha256)
+        LOGGER.info("Operational MOVES request frame: N=%d FIPS, sha256=%s", meta["N"], fips_sha256)
 
         # ── Write outputs ────────────────────────────────────────────────────
         if output_path is not None:
-            import os
             from pathlib import Path
 
             out = Path(output_path)
             out.parent.mkdir(parents=True, exist_ok=True)
 
             # Write FIPS list
-            fips_txt = out.parent / 'primary_target_fips.txt'
-            fips_txt.write_text(fips_str + '\n')
+            fips_txt = out.parent / "primary_target_fips.txt"
+            fips_txt.write_text(fips_str + "\n")
 
             # Write frame (Parquet preferred, CSV fallback)
             try:
                 _run_list.to_parquet(str(out), index=False)
             except ImportError:
-                csv_path = out.with_suffix('.csv')
+                csv_path = out.with_suffix(".csv")
                 _run_list.to_csv(str(csv_path), index=False)
-                LOGGER.warning('pyarrow not available; wrote CSV to %s', csv_path)
+                LOGGER.warning("pyarrow not available; wrote CSV to %s", csv_path)
 
             # Write metadata
-            meta_path = out.parent / 'operational_moves_request_frame_meta.json'
+            meta_path = out.parent / "operational_moves_request_frame_meta.json"
             meta_path.write_text(json.dumps(meta, indent=2))
 
-            LOGGER.info('Frame written to %s', out)
+            LOGGER.info("Frame written to %s", out)
 
         return _run_list, meta
 
@@ -2374,112 +2462,107 @@ class MOVES(Module):
         # will be run
 
         # add a column with the state code to the region-to-fips df
-        self.region_fips_map['state'] = self.region_fips_map.fips.str[0:2]
+        self.region_fips_map["state"] = self.region_fips_map.fips.str[0:2]
 
         # merge the feedstock_measure_type rows from production with the
         # region-FIPS map
-        _prod_merge = self.production[self.production.feedstock_measure ==
-                                      self.feedstock_measure_type].merge(self.region_fips_map,
-                                                                         left_on='region_production',
-                                                                         right_on='region')
+        _prod_merge = self.production[
+            self.production.feedstock_measure == self.feedstock_measure_type
+        ].merge(self.region_fips_map, left_on="region_production", right_on="region")
 
         # sum all feedstock production within each FIPS (grouping by state just
         # pulls that column along, it doesn't change the grouping)
-        _prod_by_fips_feed = _prod_merge.groupby(['fips',
-                                                  'state',
-                                                  'feedstock'],
-                                                 as_index=False).sum()
+        _prod_by_fips_feed = _prod_merge.groupby(
+            ["fips", "state", "feedstock"], as_index=False
+        ).sum()
 
         # apply feedstock loss factors for on-farm dry matter losses, since
         # trips should be calculated based on farm-gate feedstock amounts
-        self.feedstock_loss_factors['dry_matter_loss'] = pd.to_numeric(
-            self.feedstock_loss_factors['dry_matter_loss'], errors='coerce').fillna(0.0)
-        self.feedstock_loss_factors['dry_matter_remaining'] = (
-            1.0 - self.feedstock_loss_factors['dry_matter_loss']
+        self.feedstock_loss_factors["dry_matter_loss"] = pd.to_numeric(
+            self.feedstock_loss_factors["dry_matter_loss"], errors="coerce"
+        ).fillna(0.0)
+        self.feedstock_loss_factors["dry_matter_remaining"] = (
+            1.0 - self.feedstock_loss_factors["dry_matter_loss"]
         )
 
         # pull out only on-farm feedstock losses
         # @todo the list of on-farm supply chain stages should be user input
         _loss_factors_farmgate = self.feedstock_loss_factors[
-            self.feedstock_loss_factors.supply_chain_stage.isin(['farm gate'])]
+            self.feedstock_loss_factors.supply_chain_stage.isin(["farm gate"])
+        ]
 
         # calculate total losses on farm, remove unnecessary columns
-        _loss_factors_farmgate = _loss_factors_farmgate.groupby(['feedstock'], as_index=False)
-        _loss_factors_farmgate = _loss_factors_farmgate.prod(numeric_only=True)[['feedstock',
-                                                                'dry_matter_remaining']]
+        _loss_factors_farmgate = _loss_factors_farmgate.groupby(["feedstock"], as_index=False)
+        _loss_factors_farmgate = _loss_factors_farmgate.prod(numeric_only=True)[
+            ["feedstock", "dry_matter_remaining"]
+        ]
 
         # merge loss factors with prod df
         # @TODO: this ends up empty if no loss factors for feedstock(s) in _loss_factors_farmgate
-        _prod_by_fips_feed = _prod_by_fips_feed.merge(_loss_factors_farmgate,
-                                                      on='feedstock')
+        _prod_by_fips_feed = _prod_by_fips_feed.merge(_loss_factors_farmgate, on="feedstock")
 
         # calculate farmgate feedstock amount by applying loss factors
-        _prod_by_fips_feed['feedstock_amount'] = _prod_by_fips_feed['feedstock_amount'] *\
-            _prod_by_fips_feed['dry_matter_remaining']
+        _prod_by_fips_feed["feedstock_amount"] = (
+            _prod_by_fips_feed["feedstock_amount"] * _prod_by_fips_feed["dry_matter_remaining"]
+        )
 
         # remove loss factor column
-        del _prod_by_fips_feed['dry_matter_remaining']
+        del _prod_by_fips_feed["dry_matter_remaining"]
 
         # find the highest feedstock production by type within each state
-        _max_amts_feed = _prod_by_fips_feed.groupby(['state',
-                                                     'feedstock'],
-                                                    as_index=False).max()
+        _max_amts_feed = _prod_by_fips_feed.groupby(["state", "feedstock"], as_index=False).max()
 
         if self.moves_by_state:
             # sum total feedstock production within each fips-state-year combo
-            _amts_by_fips = _prod_by_fips_feed.groupby(['fips',
-                                                        'state'],
-                                                       as_index=False).sum()
+            _amts_by_fips = _prod_by_fips_feed.groupby(["fips", "state"], as_index=False).sum()
 
             # locate the fips within each state with the highest total
             # feedstock production
-            _max_amts = _amts_by_fips.groupby(['state'],
-                                              as_index=False).max()
+            _max_amts = _amts_by_fips.groupby(["state"], as_index=False).max()
 
             # strip out duplicates (shouldn't be any) to create a list of
             # unique fips-state combos to run MOVES on
-            self.moves_run_list = _max_amts[['fips',
-                                             'state']].drop_duplicates()
+            self.moves_run_list = _max_amts[["fips", "state"]].drop_duplicates()
 
         elif self.moves_by_state_and_feedstock:
             # get a list of unique fips-state-year combos for which MOVES results
             # are needed, either by running MOVES or retrieving cached data
             # keep feedstock in there to match results from each MOVES run
             # to the correct set of feedstock production data
-            self.moves_run_list = _max_amts_feed[['fips',
-                                                  'state',
-                                                  'feedstock']].drop_duplicates()
+            self.moves_run_list = _max_amts_feed[["fips", "state", "feedstock"]].drop_duplicates()
         else:
             # if neither moves_by_state nor moves_by_state_and_feedstock are True,
             # the fips-state-year combos come straight from
             # the production data
-            self.moves_run_list = _prod_merge[['fips',
-                                               'state']].drop_duplicates()
+            self.moves_run_list = _prod_merge[["fips", "state"]].drop_duplicates()
 
         # rename the fips and state columns for easier merging with the
         # production df
-        self.moves_run_list.rename(index=str,
-                                   columns={'fips': 'MOVES_run_fips',
-                                            'state': 'MOVES_run_state'},
-                                   inplace=True)
+        self.moves_run_list.rename(
+            index=str, columns={"fips": "MOVES_run_fips", "state": "MOVES_run_state"}, inplace=True
+        )
 
         # merge production with moves run fips and states and save in self
         # for use in postprocessing
-        self.prod_moves_runs = _prod_merge.merge(self.moves_run_list,
-                                                 left_on='state',
-                                                 right_on='MOVES_run_state')[['fips',
-                                                                              'MOVES_run_fips',
-                                                                              'state',
-                                                                              'region_production',
-                                                                              'region_destination',
-                                                                              'tillage_type',
-                                                                              'feedstock',
-                                                                              'feedstock_measure',
-                                                                              'feedstock_amount',
-                                                                              'source_lon',
-                                                                              'source_lat',
-                                                                              'destination_lon',
-                                                                              'destination_lat']].drop_duplicates()
+        self.prod_moves_runs = _prod_merge.merge(
+            self.moves_run_list, left_on="state", right_on="MOVES_run_state"
+        )[
+            [
+                "fips",
+                "MOVES_run_fips",
+                "state",
+                "region_production",
+                "region_destination",
+                "tillage_type",
+                "feedstock",
+                "feedstock_measure",
+                "feedstock_amount",
+                "source_lon",
+                "source_lat",
+                "destination_lon",
+                "destination_lat",
+            ]
+        ].drop_duplicates()
 
         # @NOTE prod_moves_runs is being stored in self as a potential
         # output or check on functionality; it'll also be used in
@@ -2492,21 +2575,23 @@ class MOVES(Module):
             # downselect moves_run_list based on which FIPS already have results
             # in the moves output database
 
-            LOGGER.info('checking for existing results')
+            LOGGER.info("checking for existing results")
             _exclude_fips = self._get_cached_results()
 
-            _kvals = {'h': self.config.get('moves_db_host'),
-                      'db': self.config.get('moves_output_db'),
-                      'f': _exclude_fips}
+            _kvals = {
+                "h": self.config.get("moves_db_host"),
+                "db": self.config.get("moves_output_db"),
+                "f": _exclude_fips,
+            }
 
             # if there are any FIPS with results extant
             if _exclude_fips != [None]:
                 # report that MOVES run already complete
-                LOGGER.info('using cached results from %(h)s/%(db)s for FIPS: %(f)s)' % _kvals)
+                LOGGER.info("using cached results from %(h)s/%(db)s for FIPS: %(f)s)" % _kvals)
             else:
                 # report that no cached results were found
                 # MOVES will be run over all FIPS in the input data
-                LOGGER.info('no cached results from %(h)s/%(db)s were found' % _kvals)
+                LOGGER.info("no cached results from %(h)s/%(db)s were found" % _kvals)
 
             # create shortened list of fips to run through MOVES
             _run_fips = [x for x in self.moves_run_list.MOVES_run_fips if x not in _exclude_fips]
@@ -2514,7 +2599,6 @@ class MOVES(Module):
         else:
             # run all fips regardless of whether cached results exist or not
             _run_fips = list(self.moves_run_list.MOVES_run_fips)
-
 
         # only go through the setup and run steps if there are fips that
         # need to be run
@@ -2538,27 +2622,29 @@ class MOVES(Module):
                 # then run MOVES
 
                 # import MOVES data into datbase
-                LOGGER.info('importing MOVES files for FIPS: %s' % _fips)
-                LOGGER.debug('import file: %s' % self.xmlimport_filename)
+                LOGGER.info("importing MOVES files for FIPS: %s" % _fips)
+                LOGGER.debug("import file: %s" % self.xmlimport_filename)
 
                 try:
                     _run_moves_command(
-                        flag='-i',
+                        flag="-i",
                         mrs_file=self.xmlimport_filename,
                         moves_home=self.moves_home,
                         moves_path=self.moves_path,
                     )
                 except subprocess.CalledProcessError as e:
-                    LOGGER.error('MOVES import failed for FIPS %s: %s', _fips, e)
+                    LOGGER.error("MOVES import failed for FIPS %s: %s", _fips, e)
                     raise
 
                 # fix I/M Program flag
                 im_sql_del = """DELETE FROM {db_in}.auditlog
                              WHERE importerName = 'I/M Programs Flag';""".format(db_in=self.db_in)
-                            
+
                 im_sql_ins = """INSERT INTO {db_in}.auditlog
                              (whenHappened, importerName, briefDescription, fullDescription)
-                             VALUES (NOW(), 'I/M Programs Flag', 'No data needed', '');""".format(db_in=self.db_in)
+                             VALUES (NOW(), 'I/M Programs Flag', 'No data needed', '');""".format(
+                    db_in=self.db_in
+                )
                 # open cursor
                 try:
                     _moves_cursor = self.conn.cursor()
@@ -2566,38 +2652,43 @@ class MOVES(Module):
                     _moves_cursor.execute(im_sql_del)
                     _moves_cursor.execute(im_sql_ins)
                 except pymysql.err.MySQLError as _mysqlerror:
-                    LOGGER.error('I/M Program was NOT de-selected: %s' % _mysqlerror)
+                    LOGGER.error("I/M Program was NOT de-selected: %s" % _mysqlerror)
                 finally:
                     _moves_cursor.close()
- 
+
                 # ── Fix: copy avgSpeedDistribution to execution DB ───────────────
                 # Java ROMD (RatesOperatingModeDistributionGenerator) reads
                 # avgSpeedDistribution from the execution DB, not the county CDB.
                 # Without this copy, ROMD produces no opMode fractions → Running
                 # Exhaust rates are always 0 in rateperdistance.
                 import re as _re
+
                 _exec_db = None
-                _cfg_path = os.path.join(self.moves_home, 'MOVESConfiguration.txt')
+                _cfg_path = os.path.join(self.moves_home, "MOVESConfiguration.txt")
                 try:
                     with open(_cfg_path) as _f:
                         for _line in _f:
-                            _m = _re.match(r'executionDatabaseName\s*=\s*(\S+)', _line.strip())
+                            _m = _re.match(r"executionDatabaseName\s*=\s*(\S+)", _line.strip())
                             if _m:
                                 _exec_db = _m.group(1)
                                 break
                 except Exception as _e:
-                    LOGGER.warning('Could not read MOVESConfiguration.txt: %s', _e)
+                    LOGGER.warning("Could not read MOVESConfiguration.txt: %s", _e)
                 if _exec_db:
-                    LOGGER.info('Copying avgSpeedDistribution from %s to execution DB %s',
-                                self.db_in, _exec_db)
+                    LOGGER.info(
+                        "Copying avgSpeedDistribution from %s to execution DB %s",
+                        self.db_in,
+                        _exec_db,
+                    )
                     try:
                         _econn = pymysql.connect(
                             host=self.db_host,
-                            user=self.config.get('moves_db_user'),
-                            password=self.config.get('moves_db_pass'),
-                            port=int(self.config.get('moves_db_port', 3306)))
+                            user=self.config.get("moves_db_user"),
+                            password=self.config.get("moves_db_pass"),
+                            port=int(self.config.get("moves_db_port", 3306)),
+                        )
                         _ecur = _econn.cursor()
-                        _ecur.execute(f'CREATE DATABASE IF NOT EXISTS `{_exec_db}`')
+                        _ecur.execute(f"CREATE DATABASE IF NOT EXISTS `{_exec_db}`")
                         _ecur.execute(f"""CREATE TABLE IF NOT EXISTS `{_exec_db}`.`avgSpeedDistribution` (
                             sourceTypeID  SMALLINT NOT NULL DEFAULT 0,
                             roadTypeID    SMALLINT NOT NULL DEFAULT 0,
@@ -2606,33 +2697,35 @@ class MOVES(Module):
                             avgSpeedFraction FLOAT,
                             PRIMARY KEY (sourceTypeID, roadTypeID, hourDayID, avgSpeedBinID)
                         ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4""")
-                        _ecur.execute(f'TRUNCATE TABLE `{_exec_db}`.`avgSpeedDistribution`')
+                        _ecur.execute(f"TRUNCATE TABLE `{_exec_db}`.`avgSpeedDistribution`")
                         _ecur.execute(f"""INSERT INTO `{_exec_db}`.`avgSpeedDistribution`
                             SELECT * FROM `{self.db_in}`.`avgSpeedDistribution`""")
                         _econn.commit()
-                        _ecur.execute(f'SELECT COUNT(*) FROM `{_exec_db}`.`avgSpeedDistribution`')
+                        _ecur.execute(f"SELECT COUNT(*) FROM `{_exec_db}`.`avgSpeedDistribution`")
                         _n = _ecur.fetchone()[0]
-                        LOGGER.info('avgSpeedDistribution: %d rows copied to execution DB', _n)
+                        LOGGER.info("avgSpeedDistribution: %d rows copied to execution DB", _n)
                         _ecur.close()
                         _econn.close()
                     except Exception as _e:
-                        LOGGER.error('avgSpeedDistribution copy to execution DB failed: %s', _e)
+                        LOGGER.error("avgSpeedDistribution copy to execution DB failed: %s", _e)
                 else:
-                    LOGGER.warning('Could not determine executionDatabaseName for avgSpeedDistribution copy')
+                    LOGGER.warning(
+                        "Could not determine executionDatabaseName for avgSpeedDistribution copy"
+                    )
 
                 # execute MOVES and log output
-                LOGGER.info('running MOVES for FIPS: %s' % _fips)
-                LOGGER.debug('runspec file: %s' % self.runspec_filename)
+                LOGGER.info("running MOVES for FIPS: %s" % _fips)
+                LOGGER.debug("runspec file: %s" % self.runspec_filename)
 
                 try:
                     _run_moves_command(
-                        flag='-r',
+                        flag="-r",
                         mrs_file=self.runspec_filename,
                         moves_home=self.moves_home,
                         moves_path=self.moves_path,
                     )
                 except subprocess.CalledProcessError as e:
-                    LOGGER.error('MOVES run failed for FIPS %s: %s', _fips, e)
+                    LOGGER.error("MOVES run failed for FIPS %s: %s", _fips, e)
                     raise
 
         # postprocess output
@@ -2645,9 +2738,9 @@ class MOVES(Module):
         except Exception as e:
             _e = e
             LOGGER.exception(_e)
-            _status = 'failed'
+            _status = "failed"
         else:
-            _status = 'complete'
+            _status = "complete"
         finally:
             self.status = _status
             self.results = _results
@@ -2665,7 +2758,7 @@ class MOVES(Module):
 
         # process exceptions
         if exc_type is not None:
-            LOGGER.exception('%s\n%s\n%s' % (exc_type, exc_val, exc_tb))
+            LOGGER.exception("%s\n%s\n%s" % (exc_type, exc_val, exc_tb))
             return False
         else:
             return self

@@ -29,15 +29,15 @@ class TableProvider(EmissionFactorProvider):
     def __init__(self, overall_factors: pd.DataFrame):
         self._factors = overall_factors.copy()
         # Rename overall_rate → rate to match the provider contract
-        if 'overall_rate' in self._factors.columns and 'rate' not in self._factors.columns:
-            self._factors = self._factors.rename(columns={'overall_rate': 'rate'})
+        if "overall_rate" in self._factors.columns and "rate" not in self._factors.columns:
+            self._factors = self._factors.rename(columns={"overall_rate": "rate"})
         # Ensure unit columns exist (static table may not carry them post-groupby)
-        if 'unit_numerator' not in self._factors.columns:
-            self._factors['unit_numerator'] = 'pound'
-        if 'unit_denominator' not in self._factors.columns:
-            self._factors['unit_denominator'] = 'pound'
-        if 'region' not in self._factors.columns:
-            self._factors['region'] = None
+        if "unit_numerator" not in self._factors.columns:
+            self._factors["unit_numerator"] = "pound"
+        if "unit_denominator" not in self._factors.columns:
+            self._factors["unit_denominator"] = "pound"
+        if "region" not in self._factors.columns:
+            self._factors["region"] = None
 
     def factors(self, records: pd.DataFrame) -> pd.DataFrame:
         """Return the pre-loaded static factors (ignores dynamic context columns).

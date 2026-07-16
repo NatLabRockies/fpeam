@@ -16,13 +16,15 @@ def emissionFactorsConfigCreation(tmpFolder, attributeValueObj, scenario_name):
     
     """
 
-    my_ini_config = ini_template_string.format(feedstock_measure_type=attributeValueObj.feedMeasureTypeEF,
-                                               emission_factors=attributeValueObj.emissionFactorsEF,
-                                               resource_distribution=attributeValueObj.resourceDistributionEF)
+    my_ini_config = ini_template_string.format(
+        feedstock_measure_type=attributeValueObj.feedMeasureTypeEF,
+        emission_factors=attributeValueObj.emissionFactorsEF,
+        resource_distribution=attributeValueObj.resourceDistributionEF,
+    )
 
     my_ini_file_path = os.path.join(tmpFolder, f"{scenario_name}_emissionfactors.ini")
 
-    with open(my_ini_file_path, 'w') as f:
+    with open(my_ini_file_path, "w") as f:
         f.write(my_ini_config)
 
     return my_ini_file_path

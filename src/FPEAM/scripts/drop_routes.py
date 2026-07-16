@@ -29,7 +29,7 @@ def drop_table(table):
     cur.execute(_sql)
 
 
-with psycopg2.connect(host='localhost', dbname='fpeam_topology') as conn:
+with psycopg2.connect(host="localhost", dbname="fpeam_topology") as conn:
     with conn.cursor() as cur:
         views = get_views(cur)
         while views:

@@ -1,0 +1,6 @@
+line-length = 100
+
+# Notebooks are development artifacts, not distributed source; excluding them
+# keeps `ruff format`/`ruff check` focused on the packaged src/ and tests/ trees
+# and avoids reformatting notebook cell source as an unrelated side effect.
+extend-exclude = ["*.ipynb"]

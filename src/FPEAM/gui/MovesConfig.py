@@ -94,37 +94,40 @@ def movesConfigCreation(tmpFolder, attributeValueObj, scenario_name):
     VOC = 87
     """
 
-    my_ini_config = ini_template_string.format(scenario_name=attributeValueObj.scenarioName,
-                                               aggregation_level_state=attributeValueObj.aggregation_level_state,
-                                               aggregation_level_state_feedstock=attributeValueObj.aggregation_level_state_feedstock,
-                                               use_cached_results=attributeValueObj.cachedResults,
-                                               feedstock_measure_type=attributeValueObj.feedstockMeasureTypeMoves,
-                                               no_of_trucks_used=attributeValueObj.noOfTrucksUsed,
-                                               hpmsv_type_id=attributeValueObj.hpmsvTypeId,
-                                               source_type_id=attributeValueObj.sourceTypeId,
-                                               year=attributeValueObj.yearMoves,
-                                               moves_path=attributeValueObj.movesPath,
-                                               mysql_bin_path=attributeValueObj.mysqlBinPath,
-                                               moves_datafiles_path=attributeValueObj.movesDatafilesPath,
-                                               moves_db_host=attributeValueObj.dbHost,
-                                               moves_db_user=attributeValueObj.dbUsername,
-                                               moves_db_pass=attributeValueObj.dbPwd,
-                                               moves_database=attributeValueObj.dbName,
-                                               moves_output_db=attributeValueObj.outDb,
-                                               avft=attributeValueObj.avft,
-                                               region_fips_map=attributeValueObj.regionFipsMapMoves,
-                                               rural_restricted=attributeValueObj.ruralRestricted,
-                                               rural_unrestricted=attributeValueObj.ruralUnrestricted,
-                                               urban_restricted=attributeValueObj.urbanRestricted,
-                                               urban_unrestricted=attributeValueObj.urbanUnrestricted,
-                                               month=attributeValueObj.month, date=attributeValueObj.date,
-                                               beginning_hour=attributeValueObj.beginningHr,
-                                               ending_hour=attributeValueObj.endingHr,
-                                               day_type=attributeValueObj.dayType)
+    my_ini_config = ini_template_string.format(
+        scenario_name=attributeValueObj.scenarioName,
+        aggregation_level_state=attributeValueObj.aggregation_level_state,
+        aggregation_level_state_feedstock=attributeValueObj.aggregation_level_state_feedstock,
+        use_cached_results=attributeValueObj.cachedResults,
+        feedstock_measure_type=attributeValueObj.feedstockMeasureTypeMoves,
+        no_of_trucks_used=attributeValueObj.noOfTrucksUsed,
+        hpmsv_type_id=attributeValueObj.hpmsvTypeId,
+        source_type_id=attributeValueObj.sourceTypeId,
+        year=attributeValueObj.yearMoves,
+        moves_path=attributeValueObj.movesPath,
+        mysql_bin_path=attributeValueObj.mysqlBinPath,
+        moves_datafiles_path=attributeValueObj.movesDatafilesPath,
+        moves_db_host=attributeValueObj.dbHost,
+        moves_db_user=attributeValueObj.dbUsername,
+        moves_db_pass=attributeValueObj.dbPwd,
+        moves_database=attributeValueObj.dbName,
+        moves_output_db=attributeValueObj.outDb,
+        avft=attributeValueObj.avft,
+        region_fips_map=attributeValueObj.regionFipsMapMoves,
+        rural_restricted=attributeValueObj.ruralRestricted,
+        rural_unrestricted=attributeValueObj.ruralUnrestricted,
+        urban_restricted=attributeValueObj.urbanRestricted,
+        urban_unrestricted=attributeValueObj.urbanUnrestricted,
+        month=attributeValueObj.month,
+        date=attributeValueObj.date,
+        beginning_hour=attributeValueObj.beginningHr,
+        ending_hour=attributeValueObj.endingHr,
+        day_type=attributeValueObj.dayType,
+    )
 
     my_ini_file_path = os.path.join(tmpFolder, f"{scenario_name}_moves.ini")
 
-    with open(my_ini_file_path, 'w') as f:
+    with open(my_ini_file_path, "w") as f:
         f.write(my_ini_config)
 
     return my_ini_file_path

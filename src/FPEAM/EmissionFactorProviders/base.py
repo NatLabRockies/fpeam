@@ -55,8 +55,16 @@ class EmissionFactorProvider(abc.ABC):
         Rate table with the columns listed above.
     """
 
-    RATE_COLUMNS = ('region', 'resource', 'resource_subtype', 'activity',
-                    'pollutant', 'rate', 'unit_numerator', 'unit_denominator')
+    RATE_COLUMNS = (
+        "region",
+        "resource",
+        "resource_subtype",
+        "activity",
+        "pollutant",
+        "rate",
+        "unit_numerator",
+        "unit_denominator",
+    )
 
     @abc.abstractmethod
     def factors(self, records: pd.DataFrame) -> pd.DataFrame:
@@ -67,6 +75,6 @@ class EmissionFactorProvider(abc.ABC):
         missing = set(self.RATE_COLUMNS) - set(df.columns)
         if missing:
             raise ValueError(
-                '%s.factors() output is missing required columns: %s'
+                "%s.factors() output is missing required columns: %s"
                 % (type(self).__name__, sorted(missing))
             )

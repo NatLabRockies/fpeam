@@ -7,12 +7,12 @@ import pandas as pd
 
 from . import utils
 
-CONFIG_FOLDER = 'configs'
-DATA_FOLDER = 'data'
+CONFIG_FOLDER = "configs"
+DATA_FOLDER = "data"
 
 LOGGER = utils.logger(name=__name__)
 
-_FPEAM_PKG = importlib.resources.files('FPEAM')
+_FPEAM_PKG = importlib.resources.files("FPEAM")
 
 
 def _resource_path(relpath):
@@ -36,7 +36,7 @@ def load_configs(*fpath):
 
     # add local config if available
     try:
-        _local_fpath = _resource_path('%s/local.ini' % CONFIG_FOLDER)
+        _local_fpath = _resource_path("%s/local.ini" % CONFIG_FOLDER)
     except KeyError:
         pass
     else:
@@ -49,10 +49,10 @@ def load_configs(*fpath):
     # add additional configs
     for _config_fpath in [_fpath for _fpath in fpath if _fpath is not None]:
         try:
-            LOGGER.debug('importing config file: %s' % (os.path.abspath(_config_fpath), ))
+            LOGGER.debug("importing config file: %s" % (os.path.abspath(_config_fpath),))
             _config.merge(configobj.ConfigObj(_config_fpath))
         except (configobj.ConfigObjError, IOError):
-            LOGGER.exception('Fatal error in config file %s' % _config_fpath)
+            LOGGER.exception("Fatal error in config file %s" % _config_fpath)
             raise
 
     return _config
@@ -72,18 +72,26 @@ def load(fpath, columns, memory_map=True, header=0, **kwargs):
     """
 
     try:
-        LOGGER.debug('importing columns %s from %s' % (columns, os.path.abspath(fpath)))
-        _df = pd.read_csv(filepath_or_buffer=fpath, sep=',', dtype=columns,
-                          usecols=columns.keys(), memory_map=memory_map, header=header, **kwargs)
+        LOGGER.debug("importing columns %s from %s" % (columns, os.path.abspath(fpath)))
+        _df = pd.read_csv(
+            filepath_or_buffer=fpath,
+            sep=",",
+            dtype=columns,
+            usecols=columns.keys(),
+            memory_map=memory_map,
+            header=header,
+            **kwargs,
+        )
     except ValueError as e:
         _msg = str(e)
         # pandas raises "Usecols do not match names." (pandas <2) or
         # "Usecols do not match columns" (pandas >=2) for missing columns
-        if 'Usecols do not match' in _msg:
-            _df_check = pd.read_csv(filepath_or_buffer=fpath, sep=',',
-                                    memory_map=memory_map, header=header)
+        if "Usecols do not match" in _msg:
+            _df_check = pd.read_csv(
+                filepath_or_buffer=fpath, sep=",", memory_map=memory_map, header=header
+            )
             _missing = list(set(columns.keys()) - set(_df_check.columns))
-            raise ValueError('%s missing columns: %s' % (fpath, _missing))
+            raise ValueError("%s missing columns: %s" % (fpath, _missing))
         else:
             raise
     else:

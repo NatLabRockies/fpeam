@@ -19,4 +19,6 @@ pytest = ">=8.0"
 
 [tasks]
 test = "env PYTHONPATH=src python -m pytest tests/ -v"
-lint = "ruff check src/"
+lint = "ruff check src tests"
+format = "ruff format src tests"
+format-check = "ruff format --check src tests"

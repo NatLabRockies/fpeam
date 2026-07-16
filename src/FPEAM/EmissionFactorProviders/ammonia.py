@@ -54,13 +54,13 @@ from .. import utils
 LOGGER = utils.logger(__name__)
 
 # Default parameter file bundled with the package
-_DEFAULT_PARAMS = 'data/inputs/ammonia_provider_params.csv'
+_DEFAULT_PARAMS = "data/inputs/ammonia_provider_params.csv"
 
 
 def _load_default_params():
-    pkg = importlib.resources.files('FPEAM')
+    pkg = importlib.resources.files("FPEAM")
     path = str(pkg.joinpath(_DEFAULT_PARAMS))
-    return pd.read_csv(path, comment='#')
+    return pd.read_csv(path, comment="#")
 
 
 class AmmoniaFertilizerProvider(EmissionFactorProvider):
@@ -75,23 +75,25 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     """
 
     # Fertilizer subtypes handled by this provider
-    FERTILIZER_SUBTYPES = frozenset({
-        'anhydrous ammonia',
-        'ammonium nitrate',
-        'ammonium sulfate',
-        'urea',
-        'nitrogen solutions',
-    })
+    FERTILIZER_SUBTYPES = frozenset(
+        {
+            "anhydrous ammonia",
+            "ammonium nitrate",
+            "ammonium sulfate",
+            "urea",
+            "nitrogen solutions",
+        }
+    )
 
     def __init__(self, params=None):
         if params is None:
             self._params = _load_default_params()
         elif isinstance(params, str):
-            self._params = pd.read_csv(params, comment='#')
+            self._params = pd.read_csv(params, comment="#")
         else:
             self._params = pd.DataFrame(params)
 
-        self._params = self._params.set_index('resource_subtype')
+        self._params = self._params.set_index("resource_subtype")
 
         # Validate that no base_rate would exceed 1.0 even under extreme modifier
         # combinations.  The maximum theoretical combined modifier is:
@@ -101,17 +103,15 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         #   f_soil_max = 1.15  (clay soil, Bouwman 2002 Table 2)
         # Combined maximum ≈ 2.0 × 1.22 × 1.0 × 1.15 ≈ 2.81
         _MAX_COMBINED_MODIFIER = 2.81
-        _high_rates = self._params[
-            self._params['base_rate_nh3'] * _MAX_COMBINED_MODIFIER > 1.0
-        ]
+        _high_rates = self._params[self._params["base_rate_nh3"] * _MAX_COMBINED_MODIFIER > 1.0]
         if not _high_rates.empty:
             LOGGER.warning(
-                'AmmoniaFertilizerProvider: the following fertilizer subtypes have '
-                'base_rate_nh3 values that could exceed 1.0 NH3-fraction under '
-                'extreme climate conditions (high T, high wind, dry, clay soil). '
-                'The result will be clipped to 1.0 (physical mass-balance bound), '
-                'but consider revising the base rates: %s',
-                _high_rates['base_rate_nh3'].to_dict()
+                "AmmoniaFertilizerProvider: the following fertilizer subtypes have "
+                "base_rate_nh3 values that could exceed 1.0 NH3-fraction under "
+                "extreme climate conditions (high T, high wind, dry, clay soil). "
+                "The result will be clipped to 1.0 (physical mass-balance bound), "
+                "but consider revising the base rates: %s",
+                _high_rates["base_rate_nh3"].to_dict(),
             )
 
     # ── climate modifier functions ────────────────────────────────────────
@@ -173,18 +173,18 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         Unknown textures default to 1.0.
         """
         _lookup = {
-            'sand': 0.7,
-            'loamy sand': 0.75,
-            'sandy loam': 0.85,
-            'loam': 1.0,
-            'silt loam': 1.0,
-            'silt': 1.05,
-            'sandy clay loam': 0.9,
-            'clay loam': 0.95,
-            'silty clay loam': 1.05,
-            'sandy clay': 0.85,
-            'silty clay': 1.1,
-            'clay': 1.15,
+            "sand": 0.7,
+            "loamy sand": 0.75,
+            "sandy loam": 0.85,
+            "loam": 1.0,
+            "silt loam": 1.0,
+            "silt": 1.05,
+            "sandy clay loam": 0.9,
+            "clay loam": 0.95,
+            "silty clay loam": 1.05,
+            "sandy clay": 0.85,
+            "silty clay": 1.1,
+            "clay": 1.15,
         }
         return soil_type.str.lower().map(_lookup).fillna(1.0)
 
@@ -222,11 +222,11 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         injected application should be set separately in the parameters CSV.
         """
         _mask = pd.Series(False, index=records.index)
-        if 'resource_subtype' in records.columns:
-            _mask = records['resource_subtype'].isin(self.FERTILIZER_SUBTYPES)
+        if "resource_subtype" in records.columns:
+            _mask = records["resource_subtype"].isin(self.FERTILIZER_SUBTYPES)
             # Further restrict to nitrogen resource when the column is available
-            if 'resource' in records.columns:
-                _mask = _mask & (records['resource'].str.lower() == 'nitrogen')
+            if "resource" in records.columns:
+                _mask = _mask & (records["resource"].str.lower() == "nitrogen")
 
         _relevant = records[_mask].copy() if _mask.any() else pd.DataFrame()
 
@@ -240,26 +240,25 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         # loam soil.  Users providing a geophysical_context CSV override these defaults.
         # NOTE: precip=0 (dry) produces the MAXIMUM rate; this is conservative
         # (over-estimates volatilisation when actual precipitation is unknown).
-        t = _relevant.get('temperature_c', pd.Series(15.0, index=_relevant.index))
-        w = _relevant.get('wind_speed_m_s', pd.Series(2.0, index=_relevant.index))
-        p = _relevant.get('precipitation_mm', pd.Series(0.0, index=_relevant.index))
-        s = _relevant.get('soil_type', pd.Series('loam', index=_relevant.index))
+        t = _relevant.get("temperature_c", pd.Series(15.0, index=_relevant.index))
+        w = _relevant.get("wind_speed_m_s", pd.Series(2.0, index=_relevant.index))
+        p = _relevant.get("precipitation_mm", pd.Series(0.0, index=_relevant.index))
+        s = _relevant.get("soil_type", pd.Series("loam", index=_relevant.index))
 
-        if 'precipitation_mm' not in _relevant.columns:
+        if "precipitation_mm" not in _relevant.columns:
             LOGGER.debug(
-                'AmmoniaFertilizerProvider: precipitation_mm not in records; '
-                'using 0 mm (maximum volatilisation / conservative estimate).'
+                "AmmoniaFertilizerProvider: precipitation_mm not in records; "
+                "using 0 mm (maximum volatilisation / conservative estimate)."
             )
 
-        modifier = (self._f_temperature(t)
-                    * self._f_wind(w)
-                    * self._f_precipitation(p)
-                    * self._f_soil(s))
+        modifier = (
+            self._f_temperature(t) * self._f_wind(w) * self._f_precipitation(p) * self._f_soil(s)
+        )
 
         # Look up base rates for each subtype
-        base_rates = _relevant['resource_subtype'].map(
-            self._params['base_rate_nh3'].to_dict()
-        ).fillna(0.0)
+        base_rates = (
+            _relevant["resource_subtype"].map(self._params["base_rate_nh3"].to_dict()).fillna(0.0)
+        )
 
         _relevant = _relevant.copy()
         _unclipped = (base_rates * modifier).values
@@ -268,20 +267,20 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         _over_one = _clipped < _unclipped
         if _over_one.any():
             LOGGER.warning(
-                'AmmoniaFertilizerProvider: %d rate(s) exceeded 1.0 before '
-                'mass-balance clip. Check base_rate values and climate inputs. '
-                'Subtypes affected: %s',
+                "AmmoniaFertilizerProvider: %d rate(s) exceeded 1.0 before "
+                "mass-balance clip. Check base_rate values and climate inputs. "
+                "Subtypes affected: %s",
                 int(_over_one.sum()),
-                _relevant.loc[_over_one, 'resource_subtype'].tolist(),
+                _relevant.loc[_over_one, "resource_subtype"].tolist(),
             )
-        _relevant['rate'] = _clipped
-        _relevant['pollutant'] = 'nh3'
-        _relevant['resource'] = 'nitrogen'
-        _relevant['activity'] = 'chemical application'
-        _relevant['unit_numerator'] = 'pound'
-        _relevant['unit_denominator'] = 'pound'
-        if 'region' not in _relevant.columns:
-            _relevant['region'] = None
+        _relevant["rate"] = _clipped
+        _relevant["pollutant"] = "nh3"
+        _relevant["resource"] = "nitrogen"
+        _relevant["activity"] = "chemical application"
+        _relevant["unit_numerator"] = "pound"
+        _relevant["unit_denominator"] = "pound"
+        if "region" not in _relevant.columns:
+            _relevant["region"] = None
 
         result = _relevant[list(self.RATE_COLUMNS)].reset_index(drop=True)
         self.validate_output(result)

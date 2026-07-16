@@ -1,12 +1,12 @@
 """Shared utilities and simple objects"""
 
 import logging
-from validate import (VdtTypeError, VdtValueError, ValidateError)
+from validate import VdtValueError, ValidateError
 
 LOGGER = logging.getLogger(name=__name__)
 
 
-def logger(name='FPEAM'):
+def logger(name="FPEAM"):
     """
     Produce Logger.
 
@@ -17,7 +17,7 @@ def logger(name='FPEAM'):
     return logging.getLogger(name=name)
 
 
-def configure_logging(level='INFO', fmt=None):
+def configure_logging(level="INFO", fmt=None):
     """
     Configure root logging for FPEAM applications.
 
@@ -33,7 +33,7 @@ def configure_logging(level='INFO', fmt=None):
         return  # already configured
 
     if fmt is None:
-        fmt = '%(asctime)s %(levelname)-8s %(name)s: %(message)s'
+        fmt = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(fmt))
     root.addHandler(handler)
@@ -55,12 +55,12 @@ def validate_config(config, spec):
     """
 
     from validate import Validator
-    from configobj import (ConfigObj, flatten_errors, get_extra_values)
+    from configobj import ConfigObj, flatten_errors, get_extra_values
 
-    _return = {'config': None, 'errors': {}, 'missing': [], 'extras': {}}
+    _return = {"config": None, "errors": {}, "missing": [], "extras": {}}
 
     _validator = Validator()
-    _validator.functions['filepath'] = filepath
+    _validator.functions["filepath"] = filepath
     _config = ConfigObj(config, configspec=spec, stringify=True)
     _result = _config.validate(_validator, preserve_errors=True)
 
@@ -68,14 +68,13 @@ def validate_config(config, spec):
     for _entry in flatten_errors(_config, _result):
         _section_list, _key, _error = _entry
         if _key is not None:
-            _return['errors'][_key] = _error
+            _return["errors"][_key] = _error
             _section_list.append(_key)
         elif _error is False:
-            _return['missing'].append(_key)
+            _return["missing"].append(_key)
 
     # http://configobj.readthedocs.io/en/latest/configobj.html#get-extra-values
     for _sections, _name in get_extra_values(_config):
-
         # this code gets the extra values themselves
         _the_section = _config
         for _subsection in _sections:
@@ -84,9 +83,9 @@ def validate_config(config, spec):
         # the_value may be a section or a value
         _the_value = _the_section[_name]
 
-        _return['extras'][_name] = _the_value
+        _return["extras"][_name] = _the_value
 
-    _return['config'] = _config
+    _return["config"] = _config
 
     return _return
 
@@ -110,14 +109,14 @@ def filepath(fpath, max_length=None):
     from importlib.resources import files as _pkg_files
 
     # get a full path
-    if fpath.startswith('~'):
+    if fpath.startswith("~"):
         _fpath = expanduser(fpath)
-    elif fpath.startswith('.'):
+    elif fpath.startswith("."):
         _fpath = abspath(fpath)
     else:
         _fpath = fpath
 
-    LOGGER.debug('validating %s' % fpath)
+    LOGGER.debug("validating %s" % fpath)
 
     # check if exists as regular file
     _exists = exists(_fpath)
@@ -127,7 +126,7 @@ def filepath(fpath, max_length=None):
     except AssertionError:
         # convert to resource filename if not regular file
         try:
-            _fpath = str(_pkg_files('FPEAM').joinpath(_fpath))
+            _fpath = str(_pkg_files("FPEAM").joinpath(_fpath))
         except ValueError:
             raise VdtPathDoesNotExist(value=fpath)
     else:
@@ -154,7 +153,7 @@ class VdtPathDoesNotExist(VdtValueError):
         VdtValueTooSmallError: the path "/not/a/path" does not exist
         """
 
-        ValidateError.__init__(self, 'the path "%s" does not exist' % (value, ))
+        ValidateError.__init__(self, 'the path "%s" does not exist' % (value,))
 
 
 class VdtPathTooLong(VdtValueError):
@@ -167,4 +166,6 @@ class VdtPathTooLong(VdtValueError):
         VdtValueTooSmallError: the path "/path/too/long" exceeds the maximum length of <length> characters
         """
 
-        ValidateError.__init__(self, 'the path "%s" exceeds the maximum length of %s characters' % (value, max_length))
+        ValidateError.__init__(
+            self, 'the path "%s" exceeds the maximum length of %s characters' % (value, max_length)
+        )
