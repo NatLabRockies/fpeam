@@ -129,6 +129,15 @@ The `region` column must match the `region_production` values in your production
 All climate columns are optional; missing columns default to reference-condition
 modifiers (f = 1.0), which is equivalent to using the base rate alone.
 
+**Caution — `precipitation_mm` is a short post-application window, not a monthly total.**
+`f_precip = exp(-0.02 × precipitation_mm)` is calibrated against precipitation
+*in the ~5 days following application*, not a monthly or seasonal climatological
+total. Supplying a monthly normal (tens of mm) directly will over-suppress the
+result by roughly an order of magnitude relative to the model's own reference
+condition. If only monthly/seasonal climate normals are available, rescale to an
+expected short-window total (e.g. `precip_month × 5/30`) rather than passing the
+monthly value through unchanged.
+
 **References**
 
 - Bouwman, A.F. et al. (2002). "Estimation of global NH3 volatilization loss from
