@@ -839,7 +839,7 @@ class AlltabsModule(QtWidgets.QWidget):
         self.lineEditMovesPath = QLineEdit(self)
         self.lineEditMovesPath.setAlignment(QtCore.Qt.AlignLeft)
         self.lineEditMovesPath.setFixedHeight(40)
-        self.lineEditMovesPath.setText(r"C:\MOVES2014b")
+        self.lineEditMovesPath.setText(r"C:\MOVES5.0")
         self.windowLayout.addWidget(self.MovesPathLable, 4, 0)
         self.windowLayout.addWidget(self.browseBtnMovesPath, 4, 1)
         self.windowLayout.addWidget(self.lineEditMovesPath, 4, 2, 1, 3)
@@ -985,7 +985,7 @@ class AlltabsModule(QtWidgets.QWidget):
         self.lineEditDbName.setAlignment(QtCore.Qt.AlignCenter)
         self.lineEditDbName.setFixedHeight(30)
         self.lineEditDbName.setFixedWidth(125)
-        self.lineEditDbName.setText("movesdb20180517")
+        self.lineEditDbName.setText("movesdb20241112")
         self.dbConnectionsMOVESGridLayout.addWidget(self.labelDbName, 3, 0)
         self.dbConnectionsMOVESGridLayout.addWidget(self.lineEditDbName, 3, 1)
 
@@ -3413,11 +3413,11 @@ class AlltabsModule(QtWidgets.QWidget):
         self.comboBoxYear.setCurrentIndex(self.index)
         self.lineEditDbHost.setText("localhost")
         self.lineEditDbUsername.setText("root")
-        self.lineEditDbName.setText("movesdb20180517")
+        self.lineEditDbName.setText("movesdb20241112")
         self.lineEditDbPwd.setText("root")
         self.lineEditOutDb.setText("moves_output_db")
         self.lineEditDatafiles.setText("C:/MOVESdata")
-        self.lineEditMovesPath.setText("C:/MOVES2014b")
+        self.lineEditMovesPath.setText("C:/MOVES5.0")
         self.lineEditMysqlBin.setText("C:/Program Files/MySQL/MySQL Server 5.7/bin/mysql.exe")
         self.lineEditMysqlDumpBin.setText(
             "C:/Program Files/MySQL/MySQL Server 5.7/bin/mysqldump.exe"

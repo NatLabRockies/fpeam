@@ -126,3 +126,6 @@ Untitled*.ipynb
 /docs/decision_log.md
 /docs/review_register.md
 /docs/scope_backlog.md
+
+# slice-runner runtime state (MOVES5 default refresh)
+.slice-runner-moves5defaults/

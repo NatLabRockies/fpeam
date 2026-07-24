@@ -61,10 +61,10 @@ class AttributeValueStorage:
         self.yearMoves = 2017
         self.dbHost = "localhost"
         self.dbUsername = "root"
-        self.dbName = "movesdb20180517"
+        self.dbName = "movesdb20241112"
         self.dbPwd = "root"
         self.movesDatafilesPath = r"C:\MOVESdatb"
-        self.movesPath = r"C:\MOVES2014b"
+        self.movesPath = r"C:\MOVES5.0"
         self.truckCapacity = "data/inputs/truck_capacity.csv"
         self.avft = "data/inputs/avft.csv"
         self.regionFipsMapMoves = "data/inputs/region_fips_map.csv"
