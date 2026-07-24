@@ -1,0 +1,34 @@
+[plan]
+path = "docs/MOVES5_DEFAULTS_PLAN.md"
+slice_header_re = "^### Slice ([\\w\\-]+)"
+deps_field_re   = "\\*\\*Depends on:\\*\\* (.+)"
+phase_field_re  = "\\*\\*Phase:\\*\\* (\\S+)"
+
+[validation]
+command = "bash tools/slice_checks.sh {slice_id}"
+timeout_seconds = 900
+
+[models]
+default_tier = "sonnet"
+escalation_chain = ["sonnet", "opus"]
+
+[models.model_ids]
+sonnet = "claude-sonnet-4.6"
+opus   = "claude-opus-4.7"
+
+[parallel]
+max_concurrent = 1
+
+[state]
+dir = ".slice-runner-moves5defaults"
+
+[copilot]
+max_autopilot_continues = 40
+extra_args = []
+
+[retries]
+default_per_tier = 2
+
+[retries.per_tier]
+sonnet = 2
+opus   = 2

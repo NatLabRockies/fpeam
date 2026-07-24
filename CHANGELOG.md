@@ -1,3 +1,9 @@
+2026-07-23 (unreleased)
+-----------------------
+* refresh stale MOVES defaults to MOVES5 (moves_database -> movesdb20241112,
+  moves_version -> MOVES5, moves_path -> C:/MOVES5.0) in moves.spec and the GUI
+  prefill defaults; NONROAD defaults and skipdomaindatabasevalidation unchanged
+
 2019-10-28 (v2.5.0)
 -------------------
 * add results by production region shapefile export
