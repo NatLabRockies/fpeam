@@ -435,8 +435,8 @@ class GeophysicalContext(Data):
     All columns except ``region`` are optional; providers declare which ones they
     require.  Load from a CSV with any subset of the columns below::
 
-        region,year,month,temperature_c,wind_speed_m_s,precipitation_mm,soil_type
-        17031,2017,6,22.5,3.2,45.0,silty clay loam
+        region,year,month,temperature_c,wind_speed_m_s,precipitation_mm,soil_ph
+        17031,2017,6,22.5,3.2,45.0,6.8
 
     Columns
     -------
@@ -449,11 +449,15 @@ class GeophysicalContext(Data):
     temperature_c : float (optional)
         Mean air temperature in degrees Celsius.
     wind_speed_m_s : float (optional)
-        Mean wind speed in m/s at 2 m height.
+        Mean wind speed in m/s at 10 m height, the reference height used by
+        AmmoniaFertilizerProvider.
     precipitation_mm : float (optional)
         Total precipitation in mm over the relevant period.
+    soil_ph : float (optional)
+        Soil pH (1:1 H2O).
     soil_type : str (optional)
         USDA soil texture class (e.g. ``silty clay loam``, ``sandy loam``).
+        Retained for schema stability; not used by AmmoniaFertilizerProvider.
     """
 
     # Only 'region' is strictly required; all other columns are context-dependent.
@@ -466,6 +470,7 @@ class GeophysicalContext(Data):
         "temperature_c": float,
         "wind_speed_m_s": float,
         "precipitation_mm": float,
+        "soil_ph": float,
         "soil_type": str,
     }
 

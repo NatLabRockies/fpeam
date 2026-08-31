@@ -234,10 +234,10 @@ class EmissionFactors(Module):
     # documented reference conditions so missing/uncovered regions behave identically
     # to "no context supplied".
     _GEOPHYSICAL_DEFAULTS = {
-        "temperature_c": 15.0,
+        "temperature_c": 20.0,
         "wind_speed_m_s": 2.0,
         "precipitation_mm": 0.0,
-        "soil_type": "loam",
+        "soil_ph": 7.0,
     }
 
     def _get_dynamic_factors(self, base):

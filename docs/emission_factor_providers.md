@@ -76,26 +76,52 @@ function of fertilizer subtype and geophysical context.
 NH3_fraction = base_rate(subtype)
              × f_T(temperature_c)
              × f_wind(wind_speed_m_s)
-             × f_precip(precipitation_mm)
-             × f_soil(soil_type)
+             × f_ph(soil_ph)
 ```
 
-| Modifier | Variable | Behaviour |
-|---|---|---|
-| `f_T` | temperature_c | Logistic increase; reference at 15°C |
-| `f_wind` | wind_speed_m_s | Square-root increase; capped at 3 m/s |
-| `f_precip` | precipitation_mm | Exponential decay; dry=max, wet=reduced |
-| `f_soil` | soil_type (USDA texture) | Lookup table; clay > loam > sand |
+The correction functions are the upland-crop terms of Zhan et al. (2021),
+Table S5. Each is applied as a ratio to its value at the reference condition,
+so every factor is 1.0 there and the provider returns the base rate unchanged.
+The fitted prefactors of the two exponential terms cancel under that
+normalisation, leaving only the exponents and the wind slope.
 
-> **Provenance.** No quantity in this provider comes from Bouwman et al. (2002).
-> The per-subtype base rates are the pre-existing FPEAM static NH3 emission
-> factors from `emission_factors.csv`, rounded; per the FPEAM README those derive
-> from Goebes et al. (2003), Davidson et al. (2004) and the 17/14 NH3-to-N ratio.
-> The multiplicative form and all four modifier functions are an FPEAM
-> implementation choice and are not published parameterisations. Across 3,104
-> CONUS counties `f_T` accounts for essentially all spatial variance, and
-> `f_wind` saturates its 3 m/s cap for ~84% of counties. Treat all modifiers as
-> provisional.
+| Modifier | Variable | Published form | Applied as |
+|---|---|---|---|
+| `f_T` | temperature_c | `0.1790·exp(0.0940·A)` (n=42, R²=0.61) | `exp(0.0940·(T − t_ref_c))` |
+| `f_wind` | wind_speed_m_s (at 10 m) | `0.2737·ln(u) + 0.9975` (n=60, R²=0.77) | ratio to the value at `w_ref_m_s` |
+| `f_ph` | soil_ph | `0.0429·exp(0.4955·pH)` (n=42, R²=0.33) | `exp(0.4955·(pH − ph_ref))` |
+
+The bundled reference is the Zhan et al. (2021) Table S3 measurement condition:
+20 °C and pH 7.0, with an FPEAM-chosen reference wind of 2 m/s. Table S3 reports
+observed ranges of 0.6–29.0 °C and pH 5.5–8.6.
+
+Inputs are clamped rather than extrapolated: `soil_ph` to [5.5, 8.6] (the
+published range) and `wind_speed_m_s` to [0.5, 10.0]. The wind bounds are not
+published — Zhan et al. state that observations were insufficient to constrain
+the wind response, and no wind column appears in their Supplementary Data. They
+are set from the domain of the input climatology and act as a numerical guard,
+since `f_wind` is undefined at u ≤ 0 and crosses zero at u ≈ 0.026 m/s.
+
+Output is **not** clipped. Over the full published input domain, applied to the
+largest base rate in the table, no rate reaches the physical bound of 1.0; there
+is a test that asserts this.
+
+> **Provenance.** The base rates and the correction functions come from
+> different sources. The per-subtype base rates are the pre-existing FPEAM
+> static NH3 emission factors from `emission_factors.csv`, rounded; per the
+> FPEAM README those derive from Goebes et al. (2003), Davidson et al. (2004)
+> and the 17/14 NH3-to-N ratio. They are US national-average factors, **not**
+> measurements at 20 °C and pH 7.0. Applying corrections normalised to the
+> published reference to national-average base rates shifts the implied national
+> total by construction. For a national-scale run, override the reference in a
+> custom `provider_params` CSV so that the production-weighted mean correction
+> is 1.0; the corrections then redistribute the total spatially without changing
+> it. Nothing in this provider comes from Bouwman et al. (2002).
+>
+> No published precipitation correction for cumulative volatilisation loss was
+> identified, so `precipitation_mm` is accepted but has no effect. FPEAM does
+> not carry application placement, so the Zhan placement correction (0.25 deep
+> placement, 0.50 incorporation) is not applied.
 
 **Base rates** (bundled defaults: FPEAM's existing NH3 emission factors, from Goebes et al. 2003 via `emission_factors.csv`):
 
@@ -130,35 +156,30 @@ provider_params = data/inputs/ammonia_provider_params.csv  # optional; defaults 
 **Geophysical context CSV format**
 
 ```csv
-region,year,month,temperature_c,wind_speed_m_s,precipitation_mm,soil_type
-17031,2017,6,22.5,3.2,45.0,silty clay loam
-17043,2017,6,19.1,2.8,30.0,loam
+region,year,month,temperature_c,wind_speed_m_s,soil_ph
+17031,2017,6,22.5,3.2,6.8
+17043,2017,6,19.1,2.8,7.4
 ```
 
 The `region` column must match the `region_production` values in your production data.
 All climate columns are optional; missing columns default to reference-condition
 modifiers (f = 1.0), which is equivalent to using the base rate alone.
 
-**Caution — `precipitation_mm` is a short post-application window, not a monthly total.**
-`f_precip = exp(-0.02 × precipitation_mm)` is calibrated against precipitation
-*in the ~5 days following application*, not a monthly or seasonal climatological
-total. Supplying a monthly normal (tens of mm) directly will over-suppress the
-result by roughly an order of magnitude relative to the model's own reference
-condition. If only monthly/seasonal climate normals are available, rescale to an
-expected short-window total (e.g. `precip_month × 5/30`) rather than passing the
-monthly value through unchanged.
+**Note on `wind_speed_m_s`.** Zhan et al. (2021) define wind speed at 10 m.
+Supply a 10 m value; standard NOAA station wind is reported at that height.
 
 **References**
 
 - Goebes, M.D., Strader, R., Davidson, C. (2003). "An ammonia emission inventory
   for fertilizer application in the United States." *Atmospheric Environment*,
   37(18), 2539-2550. doi:10.1016/S1352-2310(03)00129-8
-- Bouwman, A.F. et al. (2002). "Estimation of global NH3 volatilization loss from
-  synthetic fertilizers and animal manure applied to arable lands and grasslands."
-  *Global Biogeochemical Cycles*, 16(2), 8-1 to 8-14. doi:10.1029/2000GB001389
-- Bash, J.O. et al. (2013). "Evaluation of a regional air-quality model with
-  bidirectional NH3 exchange coupled to an agroecosystem model."
-  *Biogeosciences*, 10, 1635-1645. doi:10.5194/bg-10-1635-2013
+- Zhan, X., Adalibieke, W., Cui, X., Winiwarter, W., Reis, S., Zhang, L., Bai, Z.,
+  Wang, Q., Huang, W., Zhou, F. (2021). "Improved estimates of ammonia emissions
+  from global croplands." *Environmental Science & Technology*, 55(2), 1329-1338.
+  doi:10.1021/acs.est.0c05149
+- Williams, J.R., Izaurralde, R.C., Steglich, E.M., et al. (2023). *Agricultural
+  Policy / Environmental eXtender Model: Theoretical Documentation, Version 1501.*
+  Texas A&M AgriLife, Blackland Research and Extension Center.
 
 ---
 
@@ -197,8 +218,9 @@ provider = my_package.my_provider.MyProvider
 | `month` | int | no | Month (1–12) |
 | `temperature_c` | float | no | Mean air temperature (°C) |
 | `wind_speed_m_s` | float | no | Mean wind speed at 2 m height (m/s) |
-| `precipitation_mm` | float | no | Precipitation total (mm) |
-| `soil_type` | str | no | USDA texture class |
+| `precipitation_mm` | float | no | Precipitation total (mm); accepted but unused |
+| `soil_ph` | float | no | Soil pH (1:1 H2O) |
+| `soil_type` | str | no | USDA texture class; retained for schema stability, unused |
 
 Load with `FPEAM.Data.GeophysicalContext(fpath='...')`.
 

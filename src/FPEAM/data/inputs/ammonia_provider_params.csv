@@ -1,20 +1,28 @@
-# NH3 base-rate volatilisation fractions (lb NH3-N / lb N applied) at reference conditions
-# (T=15C, wind=2 m/s, precip=0 mm, loam soil).
-# SOURCE: these are the pre-existing FPEAM static NH3 emission factors from
-# emission_factors.csv, rounded to three decimals. Per the FPEAM README those
-# factors derive from Goebes, Strader and Davidson (2003), "An ammonia emission
-# inventory for fertilizer application in the United States", Atmospheric
-# Environment 37(18):2539-2550, doi:10.1016/S1352-2310(03)00129-8, together with
-# Davidson et al. (2004) and the 17/14 NH3-to-N mass ratio. The README records
-# that the Davidson et al. source could not be verified online as of 2018-07-02.
+# NH3 base-rate volatilisation fractions (lb NH3-N / lb N applied) at the
+# reference condition of Zhan et al. (2021) Table S3: mean daily air
+# temperature 20 C and soil pH 7.0, with an FPEAM reference wind speed of
+# 2 m/s at 10 m.
+# SOURCE of base_rate_nh3: the pre-existing FPEAM static NH3 emission factors
+# from emission_factors.csv, rounded to three decimals. Per the FPEAM README
+# those factors derive from Goebes, Strader and Davidson (2003), "An ammonia
+# emission inventory for fertilizer application in the United States",
+# Atmospheric Environment 37(18):2539-2550,
+# doi:10.1016/S1352-2310(03)00129-8, together with Davidson et al. (2004) and
+# the 17/14 NH3-to-N mass ratio. The README records that the Davidson et al.
+# source could not be verified online as of 2018-07-02.
 # These base rates are NOT from Bouwman et al. (2002).
-# The modifier functions in ammonia.py are an FPEAM implementation choice and
-# are not published parameterisations.
-# t_ref_c, w_ref_m_s, p_ref_mm define the reference condition used to normalise
-# the modifier functions so that all modifiers equal 1.0 at reference.
-resource_subtype,base_rate_nh3,t_ref_c,w_ref_m_s,p_ref_mm
-anhydrous ammonia,0.040,15,2,0
-ammonium nitrate,0.008,15,2,0
-ammonium sulfate,0.088,15,2,0
-urea,0.025,15,2,0
-nitrogen solutions,0.028,15,2,0
+# SOURCE of the modifier functions in ammonia.py: Zhan, X., Adalibieke, W.,
+# Cui, X., Winiwarter, W., Reis, S., Zhang, L., Bai, Z., Wang, Q., Huang, W.,
+# Zhou, F. (2021), "Improved estimates of ammonia emissions from global
+# croplands", Environmental Science & Technology 55(2):1329-1338,
+# doi:10.1021/acs.est.0c05149, Table S5, upland-crop column.
+# t_ref_c, ph_ref and w_ref_m_s define the reference condition used to
+# normalise the modifier functions so that all modifiers equal 1.0 at
+# reference. p_ref_mm is retained for schema stability only; no published
+# precipitation response was found and the precipitation term is inert.
+resource_subtype,base_rate_nh3,t_ref_c,ph_ref,w_ref_m_s,p_ref_mm
+anhydrous ammonia,0.040,20,7.0,2,0
+ammonium nitrate,0.008,20,7.0,2,0
+ammonium sulfate,0.088,20,7.0,2,0
+urea,0.025,20,7.0,2,0
+nitrogen solutions,0.028,20,7.0,2,0

@@ -3,8 +3,8 @@ AmmoniaFertilizerProvider
 =========================
 
 Computes NH3 volatilization from nitrogen fertilizer applications as a
-function of fertilizer subtype, application rate, and geophysical context
-(temperature, wind speed, precipitation, soil type).
+function of fertilizer subtype and geophysical context (air temperature, wind
+speed and soil pH).
 
 Model form
 ----------
@@ -13,72 +13,95 @@ The provider applies a multiplicative model::
     NH3_fraction = base_rate(fertilizer_subtype)
                  × f_T(temperature_c)
                  × f_wind(wind_speed_m_s)
-                 × f_precip(precipitation_mm)
-                 × f_soil(soil_type)
+                 × f_pH(soil_ph)
 
-Each modifier function is monotonic in one climate variable and normalised to
-1.0 at the reference condition.  The base rate and modifier parameters are
-loaded from a user-replaceable CSV (``ammonia_provider_params.csv``).
+The multiplicative structure and the three modifier functions are those of
+Zhan et al. (2021), whose Eq. 1a expresses the cropland volatilization rate as
+a product of a reference rate and independent correction terms::
+
+    VR = VR0 × f(pH) × f(A) × f(u) × f(T) × f(M)
+
+where A is mean daily air temperature over the growing season, u is wind speed
+at 10 m, f(T) is a fertilizer-type term and f(M) a placement term. FPEAM
+carries fertilizer subtype in ``base_rate_nh3`` and does not carry placement,
+so f(T) and f(M) are not applied here; the remaining three terms are used.
+
+Each term is applied as a ratio to its value at the reference condition. The
+fitted prefactors cancel under that normalisation, so only the exponents and
+the wind slope enter. This matters because the pH prefactor is the least
+determined coefficient in Table S5 (0.0429 with a standard error of 0.0509).
+
+Coefficients (Zhan et al. 2021, Table S5, upland crops)
+-------------------------------------------------------
+- ``f(pH) = 0.0429 × exp(0.4955 × pH)``, n=42, R2=0.33
+- ``f(A)  = 0.1790 × exp(0.0940 × A)``, n=42, R2=0.61
+- ``f(u)  = 0.2737 × ln(u) + 0.9975``, n=60, R2=0.77
+
+Reference condition (Zhan et al. 2021, Table S3): VR0 = 9.34% for upland
+crops, measured with broadcast urea by dynamic chamber at a mean daily air
+temperature of 20 C and a soil pH of 7.0. Table S3 reports observed ranges of
+0.6 to 29.0 C for temperature and 5.5 to 8.6 for pH.
 
 Provenance and known limitations
 --------------------------------
-The per-subtype ``base_rate`` values are NOT from Bouwman et al. (2002).  They
-are the pre-existing FPEAM static NH3 emission factors in
-``emission_factors.csv``, rounded to three decimals.  Per the FPEAM README
-those factors derive from the Carnegie Mellon University fertilizer ammonia
-inventory of Goebes et al. (2003) together with Davidson et al. (2004) and the
-17/14 NH3-to-N mass ratio.  The README also records that the Davidson et al.
-source could not be verified online as of 2018-07-02.
-
-The multiplicative form and the modifier functions are an FPEAM implementation
-choice and are NOT a published parameterisation.  Bouwman et al. (2002)
-assessed crop type, fertilizer type, application rate and mode, temperature,
-soil organic carbon, texture, pH and CEC, and summarised them with a linear
-regression.  That study did not report wind speed or precipitation terms, and
-did not publish the logistic temperature form or the exponential precipitation
-form used here.  Treat every modifier below as provisional pending the planned
-model replacement.
-
-Two consequences are documented in the FY26 milestone memo:
-
-1. Across 3,104 CONUS counties, ``f_T`` accounts for essentially all of the
-   spatial variance in the combined modifier.  The spatial pattern the model
-   produces is therefore controlled by an unpublished functional form.
-2. ``f_wind`` saturates its 3 m/s cap for roughly 84% of CONUS counties, so it
-   behaves as a near-constant ~1.22 scale factor rather than a spatial driver.
+1. The per-subtype ``base_rate`` values are not from Zhan et al. (2021) and
+   not from Bouwman et al. (2002). They are the pre-existing FPEAM static NH3
+   emission factors in ``emission_factors.csv``, rounded to three decimals.
+   Per the FPEAM README those factors derive from the Carnegie Mellon
+   University fertilizer ammonia inventory of Goebes et al. (2003) together
+   with Davidson et al. (2004) and the 17/14 NH3-to-N mass ratio. The README
+   records that the Davidson et al. source could not be verified online as of
+   2018-07-02. Using Zhan modifiers on Goebes base rates preserves the
+   FPEAM national level while taking the spatial response from Zhan.
+2. Zhan et al. (2021) report no reference wind speed. The 2 m/s reference is
+   an FPEAM choice. Because ``f(u)`` is logarithmic it equals 1 at
+   u = 1.009 m/s and reaches zero at u = 0.026 m/s, so a wind floor is
+   required for numerical safety.
+3. Wind speed is defined at 10 m in Zhan et al. (2021). Context data supplied
+   in ``wind_speed_m_s`` must be a 10 m value; standard NOAA station wind is
+   reported at 10 m.
+4. No published precipitation response was found for cumulative
+   volatilization loss, so ``precipitation_mm`` is accepted but has no effect.
+5. The temperature term is applied without clamping. County mean May air
+   temperatures over CONUS cropland fall largely inside the 0.6 to 29.0 C
+   range Zhan report, but the warmest counties extrapolate slightly beyond it.
+6. EPIC/APEX (Williams et al. 2023, Eqs. 2.5.85 to 2.5.88) applies the same
+   temperature factor to both nitrification and volatilization, so temperature
+   cancels from its partition and the cumulative volatilized fraction is
+   temperature independent. The Zhan fitted response of exp(0.0940 per C),
+   equivalent to a Q10 of 2.56, sits between that and the ~3.2 per 10 K
+   implied by the pure NH3 thermodynamic driving force. It is therefore a
+   damped response consistent with a competing nitrification sink, which is
+   the behaviour the FY26 review identified as required.
 
 References
 ----------
+- Zhan, X., Adalibieke, W., Cui, X., Winiwarter, W., Reis, S., Zhang, L.,
+  Bai, Z., Wang, Q., Huang, W., Zhou, F. (2021). "Improved estimates of
+  ammonia emissions from global croplands." *Environmental Science &
+  Technology*, 55(2), 1329-1338. doi:10.1021/acs.est.0c05149
 - Goebes, M.D., Strader, R., Davidson, C. (2003). "An ammonia emission
   inventory for fertilizer application in the United States."
   *Atmospheric Environment*, 37(18), 2539-2550.
   doi:10.1016/S1352-2310(03)00129-8
-- Bouwman, A.F., Boumans, L.J.M., Batjes, N.H. (2002). "Estimation of global
-  NH3 volatilization loss from synthetic fertilizers and animal manure applied
-  to arable lands and grasslands." *Global Biogeochemical Cycles*, 16(2),
-  8-1 to 8-14. doi:10.1029/2000GB001389
-- Bash, J.O., Cooter, E.J., Dennis, R.L., Walker, J.T., Pleim, J.E. (2013).
-  "Evaluation of a regional air-quality model with bidirectional NH3 exchange
-  coupled to an agroecosystem model." *Biogeosciences*, 10, 1635-1645.
-  doi:10.5194/bg-10-1635-2013
-- Pan, B., Lam, S.K., Mosier, A., Luo, Y., Chen, D. (2016). "Ammonia
-  volatilization from synthetic fertilizers and its mitigation strategies:
-  A global synthesis." *Agriculture, Ecosystems & Environment*, 232, 283-289.
-  doi:10.1016/j.agee.2016.08.019
+- Williams, J.R., Izaurralde, R.C., Steglich, E.M., et al. (2023).
+  *Agricultural Policy / Environmental eXtender Model: Theoretical
+  Documentation, Version 1501.* Texas A&M AgriLife, Blackland Research and
+  Extension Center.
 
 Context columns consumed
 ------------------------
 temperature_c
-    Mean application-period air temperature in °C.
+    Mean daily air temperature over the application period in C.
 wind_speed_m_s
-    Mean wind speed at 2 m height in m/s.
+    Mean wind speed at 10 m height in m/s.
+soil_ph
+    Soil pH (1:1 H2O).
 precipitation_mm
-    Total precipitation over the 5 days post-application in mm.
-soil_type
-    USDA texture class string (e.g. ``silty clay loam``).
+    Accepted for schema stability. Not used.
 
-All context columns are optional; if missing, the corresponding modifier
-defaults to 1.0 (neutral).
+All context columns are optional; if missing, the corresponding driver falls
+back to its reference value and the modifier is 1.0.
 """
 
 import importlib.resources
@@ -106,8 +129,8 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     Parameters
     ----------
     params : pd.DataFrame or str, optional
-        Parameter table (or path to CSV) defining ``base_rate`` and modifier
-        parameters per fertilizer subtype.  Defaults to the bundled
+        Parameter table (or path to CSV) defining ``base_rate_nh3`` and the
+        reference condition per fertilizer subtype. Defaults to the bundled
         ``ammonia_provider_params.csv``.
     """
 
@@ -122,6 +145,24 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         }
     )
 
+    # Zhan et al. (2021) Table S5, upland crops
+    TEMPERATURE_EXPONENT = 0.0940  # per degree C
+    PH_EXPONENT = 0.4955  # per pH unit
+    WIND_SLOPE = 0.2737
+    WIND_INTERCEPT = 0.9975
+
+    # Input domain. pH bounds are the observed range in Zhan et al. (2021)
+    # Table S3. Zhan report no wind range, so the wind bounds are set from the
+    # domain of the 10 m monthly-mean wind climatology FPEAM consumes: CONUS
+    # county May means span roughly 1.5 to 6 m/s, so 0.5 to 10 m/s brackets
+    # the input data with margin and the clamp is a numerical guard rather
+    # than an active constraint. The floor also keeps ln(u) away from the
+    # zero crossing of f(u) at u = 0.026 m/s.
+    WIND_MIN_M_S = 0.5
+    WIND_MAX_M_S = 10.0
+    PH_MIN = 5.5
+    PH_MAX = 8.6
+
     def __init__(self, params=None):
         if params is None:
             self._params = _load_default_params()
@@ -132,131 +173,93 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
 
         self._params = self._params.set_index("resource_subtype")
 
-        # Validate that no base_rate would exceed 1.0 even under extreme modifier
-        # combinations.  The maximum theoretical combined modifier is:
-        #   f_T_max ≈ 2.0  (logistic limit as T → ∞)
-        #   f_wind_max = sqrt(3/2) ≈ 1.22  (capped at 3 m/s)
-        #   f_precip_max = 1.0  (0 mm precipitation)
-        #   f_soil_max = 1.15  (clay soil; FPEAM texture lookup, not published)
-        # Combined maximum ≈ 2.0 × 1.22 × 1.0 × 1.15 ≈ 2.81
-        _MAX_COMBINED_MODIFIER = 2.81
-        _high_rates = self._params[self._params["base_rate_nh3"] * _MAX_COMBINED_MODIFIER > 1.0]
-        if not _high_rates.empty:
+        self._t_ref_c = self._single_reference("t_ref_c", 20.0)
+        self._ph_ref = self._single_reference("ph_ref", 7.0)
+        self._w_ref_m_s = self._single_reference("w_ref_m_s", 2.0)
+
+    def _single_reference(self, column, default):
+        """Return the one reference value shared by every fertilizer subtype."""
+        if column not in self._params.columns:
             LOGGER.warning(
-                "AmmoniaFertilizerProvider: the following fertilizer subtypes have "
-                "base_rate_nh3 values that could exceed 1.0 NH3-fraction under "
-                "extreme climate conditions (high T, high wind, dry, clay soil). "
-                "The result will be clipped to 1.0 (physical mass-balance bound), "
-                "but consider revising the base rates: %s",
-                _high_rates["base_rate_nh3"].to_dict(),
+                "AmmoniaFertilizerProvider: parameter table has no %s column; using %s.",
+                column,
+                default,
             )
+            return float(default)
+        values = self._params[column].astype(float).unique()
+        if len(values) > 1:
+            raise ValueError(
+                "AmmoniaFertilizerProvider: %s must be identical for every "
+                "fertilizer subtype; found %s. The modifier functions are "
+                "normalised to a single reference condition." % (column, list(values))
+            )
+        return float(values[0])
 
-    # ── climate modifier functions ────────────────────────────────────────
+    # -- modifier functions ------------------------------------------------
+
+    def _f_temperature(self, t_c):
+        """Air temperature modifier, Zhan et al. (2021) Table S5 f(A).
+
+        ``f(A) = 0.1790 * exp(0.0940 * A)``. Taken as a ratio to the reference
+        temperature the prefactor cancels::
+
+            f_T(A) = exp(0.0940 * (A - A_ref))
+
+        The slope of 0.0940 per C is a Q10 of exp(0.940) = 2.56. Applied
+        without clamping; see limitation 5 in the module docstring.
+        """
+        return np.exp(self.TEMPERATURE_EXPONENT * (t_c - self._t_ref_c))
+
+    def _f_wind(self, w_m_s):
+        """Wind speed modifier, Zhan et al. (2021) Table S5 f(u).
+
+        ``f(u) = 0.2737 * ln(u) + 0.9975`` for u at 10 m. The prefactor does
+        not cancel for a logarithmic form, so the ratio is taken directly::
+
+            f_wind(u) = f(u) / f(u_ref)
+
+        Inputs are clamped to ``[WIND_MIN_M_S, WIND_MAX_M_S]`` so that
+        negative or zero wind speeds cannot produce NaN or a negative
+        modifier.
+        """
+        w = np.clip(w_m_s, self.WIND_MIN_M_S, self.WIND_MAX_M_S)
+        numerator = self.WIND_SLOPE * np.log(w) + self.WIND_INTERCEPT
+        denominator = self.WIND_SLOPE * np.log(self._w_ref_m_s) + self.WIND_INTERCEPT
+        return numerator / denominator
+
+    def _f_ph(self, ph):
+        """Soil pH modifier, Zhan et al. (2021) Table S5 f(pH).
+
+        ``f(pH) = 0.0429 * exp(0.4955 * pH)``. Taken as a ratio to the
+        reference pH the prefactor cancels::
+
+            f_pH(pH) = exp(0.4955 * (pH - pH_ref))
+
+        Inputs are clamped to the observed range of Table S3, 5.5 to 8.6,
+        rather than extrapolated. The prefactor cancelling is fortunate: its
+        standard error, 0.0509, exceeds the fitted value of 0.0429.
+        """
+        return np.exp(self.PH_EXPONENT * (np.clip(ph, self.PH_MIN, self.PH_MAX) - self._ph_ref))
 
     @staticmethod
-    def _f_temperature(t_c: pd.Series) -> pd.Series:
-        """Temperature modifier: logistic increase, reference-normalised.
+    def _f_precipitation(p_mm):
+        """Inert. No published precipitation response was found.
 
-        NOT a published parameterisation.  This logistic form and its slope
-        (0.15) are an FPEAM implementation choice.  Bouwman et al. (2002)
-        assessed temperature but summarised it in a linear regression and did
-        not publish this curve::
-
-            f_T_raw(T) = 1 / (1 + exp(-0.15 * (T - 15)))
-
-        Normalised so f_T(15°C) = 1.0::
-
-            ref = f_T_raw(15) = 0.5
-            f_T(T) = f_T_raw(T) / ref
-
-        Properties:
-        - f_T(15°C) = 1.0 (reference condition)
-        - f_T(0°C)  ≈ 0.27  (low-temperature suppression)
-        - f_T(30°C) ≈ 1.69  (warm conditions increase volatilisation)
-        - f_T → 2.0 as T → ∞  (theoretical maximum; never reached in practice)
-
-        This modifier dominates the spatial pattern the provider produces (it
-        accounts for essentially all between-county variance across CONUS), so
-        the choice of slope directly sets the magnitude of the modelled spatial
-        spread.  Revisit before using output for anything beyond relative
-        comparison.
+        Zhan et al. (2021) do not include a precipitation correction term, and
+        no published response for cumulative volatilization loss was located.
+        The term is retained at 1.0 so that ``precipitation_mm`` remains an
+        accepted context column without silently affecting results.
         """
-        ref = 1.0 / (1.0 + np.exp(-0.15 * (15.0 - 15.0)))  # = 0.5
-        return (1.0 / (1.0 + np.exp(-0.15 * (t_c - 15.0)))) / ref
+        return pd.Series(1.0, index=getattr(p_mm, "index", None))
 
-    @staticmethod
-    def _f_wind(w_m_s: pd.Series) -> pd.Series:
-        """Wind speed modifier: square-root increase, capped at 3.0 m/s.
-
-        NOT a published parameterisation.  Bouwman et al. (2002) did not assess
-        wind speed.  This term is included because the FY26 scope names wind
-        speed, and wind is an established control on volatilisation in
-        process-based treatments (Genermont and Cellier 1997), but the form and
-        the cap are an FPEAM implementation choice.
-
-        f_W = min(sqrt(max(W, 0) / 2.0), sqrt(3.0 / 2.0)) / sqrt(2.0 / 2.0)
-        Normalised so f_W(2.0 m/s) = 1.0.
-
-        Caveat: the 3 m/s cap is exceeded by roughly 84% of CONUS counties
-        under May climatology, so in national-scale use this term is pinned at
-        its maximum (~1.22) for most of the domain.  It then acts as a near
-        constant uplift rather than a spatial driver.  Raising or removing the
-        cap changes the level of all national results.
-
-        Negative wind speeds are physically impossible; they are clamped to 0
-        rather than propagating NaN.
-        """
-        ref = np.sqrt(2.0 / 2.0)  # = 1.0
-        w_safe = w_m_s.clip(lower=0.0)
-        return np.minimum(np.sqrt(w_safe / 2.0), np.sqrt(3.0 / 2.0)) / ref
-
-    @staticmethod
-    def _f_precipitation(p_mm: pd.Series) -> pd.Series:
-        """Precipitation damping modifier: exponential decay with rain.
-
-        NOT a published parameterisation.  Bouwman et al. (2002) did not assess
-        precipitation.  This term and its decay constant are an FPEAM
-        implementation choice, included because the FY26 scope names
-        precipitation.
-
-        f_P = exp(-0.02 * P)
-        Normalised so f_P(0 mm) = 1.0 (dry conditions → maximum volatilisation).
-        """
-        return np.exp(-0.02 * p_mm)
-
-    @staticmethod
-    def _f_soil(soil_type: pd.Series) -> pd.Series:
-        """Soil modifier: lookup table by USDA texture class.
-
-        Bouwman et al. (2002) assessed soil texture as a driver, but these
-        12-class USDA values are an FPEAM interpolation of that qualitative
-        finding and are not published coefficients.  Unknown textures default
-        to 1.0.
-        """
-        _lookup = {
-            "sand": 0.7,
-            "loamy sand": 0.75,
-            "sandy loam": 0.85,
-            "loam": 1.0,
-            "silt loam": 1.0,
-            "silt": 1.05,
-            "sandy clay loam": 0.9,
-            "clay loam": 0.95,
-            "silty clay loam": 1.05,
-            "sandy clay": 0.85,
-            "silty clay": 1.1,
-            "clay": 1.15,
-        }
-        return soil_type.str.lower().map(_lookup).fillna(1.0)
-
-    # ── provider interface ────────────────────────────────────────────────
+    # -- provider interface ------------------------------------------------
 
     def factors(self, records: pd.DataFrame) -> pd.DataFrame:
         """Return dynamic NH3 rates for each (region, resource_subtype) combination.
 
         Only rows where ``resource_subtype`` is one of the recognised nitrogen
-        fertilizer subtypes produce output rows.  When ``resource`` is present in
-        the input, rows where ``resource != 'nitrogen'`` are also excluded.  For
+        fertilizer subtypes produce output rows. When ``resource`` is present in
+        the input, rows where ``resource != 'nitrogen'`` are also excluded. For
         subtypes not handled by this provider no rows are returned (fall through to
         TableProvider or other providers in the chain).
 
@@ -265,8 +268,7 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         records : pd.DataFrame
             Must contain at minimum ``region`` and ``resource_subtype``.
             When present, ``resource`` is used to restrict to nitrogen applications.
-            Optional context: ``temperature_c``, ``wind_speed_m_s``,
-            ``precipitation_mm``, ``soil_type``.
+            Optional context: ``temperature_c``, ``wind_speed_m_s``, ``soil_ph``.
 
         Returns
         -------
@@ -276,11 +278,14 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
 
         Application type caveat
         -----------------------
-        The Bouwman et al. (2002) base rates assume surface-applied fertilizer
-        application.  Anhydrous ammonia is often injected below the soil surface,
-        which produces near-zero atmospheric volatilisation.  If your equipment
-        data mixes injected and surface-applied anhydrous ammonia, the rate for
-        injected application should be set separately in the parameters CSV.
+        The Goebes-derived base rates represent surface-applied fertilizer.
+        Anhydrous ammonia is often injected below the soil surface, which
+        produces far lower atmospheric volatilization. Zhan et al. (2021)
+        Table S5 give a placement correction of 0.25 for deep placement and
+        0.50 for incorporation in upland crops. FPEAM does not carry
+        application placement, so no placement term is applied; if equipment
+        data distinguishes injected from surface-applied anhydrous ammonia,
+        set the rate separately in the parameters CSV.
         """
         _mask = pd.Series(False, index=records.index)
         if "resource_subtype" in records.columns:
@@ -295,46 +300,27 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
             # Return empty frame with the correct columns
             return pd.DataFrame(columns=list(self.RATE_COLUMNS))
 
-        # Apply climate modifiers (default to neutral conditions when context is absent).
-        # Default reference conditions (FPEAM convention, not a published reference state):
-        # T=15°C, wind=2 m/s, precip=0 mm (maximum volatilisation scenario),
-        # loam soil.  Users providing a geophysical_context CSV override these defaults.
-        # NOTE: precip=0 (dry) produces the MAXIMUM rate; this is conservative
-        # (over-estimates volatilisation when actual precipitation is unknown).
-        t = _relevant.get("temperature_c", pd.Series(15.0, index=_relevant.index))
-        w = _relevant.get("wind_speed_m_s", pd.Series(2.0, index=_relevant.index))
-        p = _relevant.get("precipitation_mm", pd.Series(0.0, index=_relevant.index))
-        s = _relevant.get("soil_type", pd.Series("loam", index=_relevant.index))
+        # Drivers default to the reference condition when context is absent,
+        # which makes every modifier exactly 1.0 and returns the base rate.
+        t = _relevant.get("temperature_c", pd.Series(self._t_ref_c, index=_relevant.index))
+        w = _relevant.get("wind_speed_m_s", pd.Series(self._w_ref_m_s, index=_relevant.index))
+        ph = _relevant.get("soil_ph", pd.Series(self._ph_ref, index=_relevant.index))
 
-        if "precipitation_mm" not in _relevant.columns:
+        if "soil_ph" not in _relevant.columns:
             LOGGER.debug(
-                "AmmoniaFertilizerProvider: precipitation_mm not in records; "
-                "using 0 mm (maximum volatilisation / conservative estimate)."
+                "AmmoniaFertilizerProvider: soil_ph not in records; using the "
+                "reference pH of %s (neutral modifier).",
+                self._ph_ref,
             )
 
-        modifier = (
-            self._f_temperature(t) * self._f_wind(w) * self._f_precipitation(p) * self._f_soil(s)
-        )
+        modifier = self._f_temperature(t) * self._f_wind(w) * self._f_ph(ph)
 
         # Look up base rates for each subtype
         base_rates = (
             _relevant["resource_subtype"].map(self._params["base_rate_nh3"].to_dict()).fillna(0.0)
         )
 
-        _relevant = _relevant.copy()
-        _unclipped = (base_rates * modifier).values
-        _clipped = np.clip(_unclipped, 0.0, 1.0)
-        # Warn if any rate would exceed 1.0 before clipping (physical bound violated)
-        _over_one = _clipped < _unclipped
-        if _over_one.any():
-            LOGGER.warning(
-                "AmmoniaFertilizerProvider: %d rate(s) exceeded 1.0 before "
-                "mass-balance clip. Check base_rate values and climate inputs. "
-                "Subtypes affected: %s",
-                int(_over_one.sum()),
-                _relevant.loc[_over_one, "resource_subtype"].tolist(),
-            )
-        _relevant["rate"] = _clipped
+        _relevant["rate"] = (base_rates * modifier).values
         _relevant["pollutant"] = "nh3"
         _relevant["resource"] = "nitrogen"
         _relevant["activity"] = "chemical application"
