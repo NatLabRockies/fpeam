@@ -87,7 +87,14 @@ NH3_fraction = base_rate(subtype)
 | `f_precip` | precipitation_mm | Exponential decay; dry=max, wet=reduced |
 | `f_soil` | soil_type (USDA texture) | Lookup table; clay > loam > sand |
 
-**Base rates** (bundled defaults from Bouwman 2002, Table 3 median values):
+> **Provenance.** Only the per-subtype base rates come from Bouwman et al. (2002).
+> The multiplicative form and all four modifier functions are an FPEAM
+> implementation choice and are not published parameterisations. Bouwman et al.
+> (2002) did not assess wind speed or precipitation. Across 3,104 CONUS counties
+> `f_T` accounts for essentially all spatial variance, and `f_wind` saturates its
+> 3 m/s cap for ~84% of counties. Treat all modifiers as provisional.
+
+**Base rates** (bundled defaults: median volatilisation loss by fertilizer type reported in Bouwman et al. 2002):
 
 | Fertilizer subtype | Base rate (lb NH3-N / lb N) | Notes |
 |---|---|---|
@@ -99,7 +106,7 @@ NH3_fraction = base_rate(subtype)
 
 **Important caveat — anhydrous ammonia application method**
 
-The Bouwman 2002 base rate of 0.040 applies to **surface-incorporated** anhydrous ammonia.
+The Bouwman et al. (2002) base rate of 0.040 applies to **surface-applied** anhydrous ammonia.
 Anhydrous ammonia is often injected below the soil surface (deep injection), which results
 in near-zero atmospheric NH3 volatilisation because the gas reacts immediately with soil
 moisture and is retained.  If your equipment dataset represents injected anhydrous ammonia,

@@ -8,7 +8,7 @@ function of fertilizer subtype, application rate, and geophysical context
 
 Model form
 ----------
-The provider implements a simplified Bouwman-style multiplicative model::
+The provider applies a multiplicative model::
 
     NH3_fraction = base_rate(fertilizer_subtype)
                  × f_T(temperature_c)
@@ -16,18 +16,42 @@ The provider implements a simplified Bouwman-style multiplicative model::
                  × f_precip(precipitation_mm)
                  × f_soil(soil_type)
 
-Each modifier function is monotonic in one climate variable and bounded in
-[0, 1] relative to the reference condition.  The base rate and modifier
-parameters are loaded from a user-replaceable CSV (``ammonia_provider_params.csv``).
+Each modifier function is monotonic in one climate variable and normalised to
+1.0 at the reference condition.  The base rate and modifier parameters are
+loaded from a user-replaceable CSV (``ammonia_provider_params.csv``).
+
+Provenance and known limitations
+--------------------------------
+The per-subtype ``base_rate`` values are the median volatilisation losses by
+fertilizer type reported in Bouwman et al. (2002).
+
+The multiplicative form and the modifier functions are an FPEAM implementation
+choice and are NOT a published parameterisation.  Bouwman et al. (2002)
+assessed crop type, fertilizer type, application rate and mode, temperature,
+soil organic carbon, texture, pH and CEC, and summarised them with a linear
+regression.  That study did not report wind speed or precipitation terms, and
+did not publish the logistic temperature form or the exponential precipitation
+form used here.  Treat every modifier below as provisional pending the planned
+model replacement.
+
+Two consequences are documented in the FY26 milestone memo:
+
+1. Across 3,104 CONUS counties, ``f_T`` accounts for essentially all of the
+   spatial variance in the combined modifier.  The spatial pattern the model
+   produces is therefore controlled by an unpublished functional form.
+2. ``f_wind`` saturates its 3 m/s cap for roughly 84% of CONUS counties, so it
+   behaves as a near-constant ~1.22 scale factor rather than a spatial driver.
 
 References
 ----------
-- Bouwman, A.F. et al. (2002). "Estimation of global NH3 volatilization loss
-  from synthetic fertilizers and animal manure applied to arable lands and
-  grasslands." *Global Biogeochemical Cycles*, 16(2), 8-1 to 8-14.
-  doi:10.1029/2000GB001389
-- Pan, B. et al. (2016). "A meta-analysis of fertilizer-induced soil NO and
-  combined NO+N2O emissions." *Global Change Biology*, 22(7), 2494-2512.
+- Bouwman, A.F., Boumans, L.J.M., Batjes, N.H. (2002). "Estimation of global
+  NH3 volatilization loss from synthetic fertilizers and animal manure applied
+  to arable lands and grasslands." *Global Biogeochemical Cycles*, 16(2),
+  8-1 to 8-14. doi:10.1029/2000GB001389
+- Pan, B., Lam, S.K., Mosier, A., Luo, Y., Chen, D. (2016). "Ammonia
+  volatilization from synthetic fertilizers and its mitigation strategies:
+  A global synthesis." *Agriculture, Ecosystems & Environment*, 232, 283-289.
+  doi:10.1016/j.agee.2016.08.019
 
 Context columns consumed
 ------------------------
@@ -100,7 +124,7 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         #   f_T_max ≈ 2.0  (logistic limit as T → ∞)
         #   f_wind_max = sqrt(3/2) ≈ 1.22  (capped at 3 m/s)
         #   f_precip_max = 1.0  (0 mm precipitation)
-        #   f_soil_max = 1.15  (clay soil, Bouwman 2002 Table 2)
+        #   f_soil_max = 1.15  (clay soil; FPEAM texture lookup, not published)
         # Combined maximum ≈ 2.0 × 1.22 × 1.0 × 1.15 ≈ 2.81
         _MAX_COMBINED_MODIFIER = 2.81
         _high_rates = self._params[self._params["base_rate_nh3"] * _MAX_COMBINED_MODIFIER > 1.0]
@@ -120,7 +144,10 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def _f_temperature(t_c: pd.Series) -> pd.Series:
         """Temperature modifier: logistic increase, reference-normalised.
 
-        Uses the Bouwman 2002 logistic parameterisation::
+        NOT a published parameterisation.  This logistic form and its slope
+        (0.15) are an FPEAM implementation choice.  Bouwman et al. (2002)
+        assessed temperature but summarised it in a linear regression and did
+        not publish this curve::
 
             f_T_raw(T) = 1 / (1 + exp(-0.15 * (T - 15)))
 
@@ -135,9 +162,11 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         - f_T(30°C) ≈ 1.69  (warm conditions increase volatilisation)
         - f_T → 2.0 as T → ∞  (theoretical maximum; never reached in practice)
 
-        The modifier can exceed 1.0 at temperatures above the 15°C reference.
-        Combined with the base rate and other modifiers, the result is bounded by
-        the physical mass-balance clip applied in factors().
+        This modifier dominates the spatial pattern the provider produces (it
+        accounts for essentially all between-county variance across CONUS), so
+        the choice of slope directly sets the magnitude of the modelled spatial
+        spread.  Revisit before using output for anything beyond relative
+        comparison.
         """
         ref = 1.0 / (1.0 + np.exp(-0.15 * (15.0 - 15.0)))  # = 0.5
         return (1.0 / (1.0 + np.exp(-0.15 * (t_c - 15.0)))) / ref
@@ -146,8 +175,20 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def _f_wind(w_m_s: pd.Series) -> pd.Series:
         """Wind speed modifier: square-root increase, capped at 3.0 m/s.
 
+        NOT a published parameterisation.  Bouwman et al. (2002) did not assess
+        wind speed.  This term is included because the FY26 scope names wind
+        speed, and wind is an established control on volatilisation in
+        process-based treatments (Genermont and Cellier 1997), but the form and
+        the cap are an FPEAM implementation choice.
+
         f_W = min(sqrt(max(W, 0) / 2.0), sqrt(3.0 / 2.0)) / sqrt(2.0 / 2.0)
         Normalised so f_W(2.0 m/s) = 1.0.
+
+        Caveat: the 3 m/s cap is exceeded by roughly 84% of CONUS counties
+        under May climatology, so in national-scale use this term is pinned at
+        its maximum (~1.22) for most of the domain.  It then acts as a near
+        constant uplift rather than a spatial driver.  Raising or removing the
+        cap changes the level of all national results.
 
         Negative wind speeds are physically impossible; they are clamped to 0
         rather than propagating NaN.
@@ -160,7 +201,12 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def _f_precipitation(p_mm: pd.Series) -> pd.Series:
         """Precipitation damping modifier: exponential decay with rain.
 
-        f_P = exp(-0.02 * P)   (Bouwman 2002 parameterisation)
+        NOT a published parameterisation.  Bouwman et al. (2002) did not assess
+        precipitation.  This term and its decay constant are an FPEAM
+        implementation choice, included because the FY26 scope names
+        precipitation.
+
+        f_P = exp(-0.02 * P)
         Normalised so f_P(0 mm) = 1.0 (dry conditions → maximum volatilisation).
         """
         return np.exp(-0.02 * p_mm)
@@ -169,8 +215,10 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
     def _f_soil(soil_type: pd.Series) -> pd.Series:
         """Soil modifier: lookup table by USDA texture class.
 
-        Based on Bouwman 2002 Table 2 relative volatilisation adjustments.
-        Unknown textures default to 1.0.
+        Bouwman et al. (2002) assessed soil texture as a driver, but these
+        12-class USDA values are an FPEAM interpolation of that qualitative
+        finding and are not published coefficients.  Unknown textures default
+        to 1.0.
         """
         _lookup = {
             "sand": 0.7,
@@ -215,7 +263,7 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
 
         Application type caveat
         -----------------------
-        The Bouwman 2002 base rates assume surface-incorporated fertilizer
+        The Bouwman et al. (2002) base rates assume surface-applied fertilizer
         application.  Anhydrous ammonia is often injected below the soil surface,
         which produces near-zero atmospheric volatilisation.  If your equipment
         data mixes injected and surface-applied anhydrous ammonia, the rate for
@@ -235,7 +283,7 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
             return pd.DataFrame(columns=list(self.RATE_COLUMNS))
 
         # Apply climate modifiers (default to neutral conditions when context is absent).
-        # Default reference conditions match the Bouwman 2002 parameterisation:
+        # Default reference conditions (FPEAM convention, not a published reference state):
         # T=15°C, wind=2 m/s, precip=0 mm (maximum volatilisation scenario),
         # loam soil.  Users providing a geophysical_context CSV override these defaults.
         # NOTE: precip=0 (dry) produces the MAXIMUM rate; this is conservative

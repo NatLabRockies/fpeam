@@ -1,7 +1,9 @@
 # NH3 base-rate volatilisation fractions (lb NH3-N / lb N applied) at reference conditions
 # (T=15°C, wind=2 m/s, precip=0 mm, loam soil) derived from:
 #   Bouwman et al. (2002), Global Biogeochemical Cycles 16(2), doi:10.1029/2000GB001389
-#   Table 3 median values by fertilizer type.
+#   median volatilisation loss by fertilizer type.
+# NOTE: only these base rates are from Bouwman et al. (2002). The modifier
+# functions in ammonia.py are an FPEAM implementation choice, not published.
 # These values are consistent with the static emission_factors.csv in this package
 # which was derived from the same source for the Billion Ton Study update.
 # t_ref_c, w_ref_m_s, p_ref_mm define the reference condition used to normalise
