@@ -23,7 +23,7 @@ Setting `provider = ammonia_fertilizer` (or any other `EmissionFactorProvider`
 subclass) now runs through the standard `EmissionFactors.run()` path end to
 end — records are joined against `resource_distribution` and
 `geophysical_context`, missing climate context falls back to neutral
-Bouwman-reference defaults, and the provider's output is merged into the
+reference-condition defaults, and the provider's output is merged into the
 same emissions-calculation flow the static `table` provider already uses.
 
 ---
@@ -87,14 +87,17 @@ NH3_fraction = base_rate(subtype)
 | `f_precip` | precipitation_mm | Exponential decay; dry=max, wet=reduced |
 | `f_soil` | soil_type (USDA texture) | Lookup table; clay > loam > sand |
 
-> **Provenance.** Only the per-subtype base rates come from Bouwman et al. (2002).
+> **Provenance.** No quantity in this provider comes from Bouwman et al. (2002).
+> The per-subtype base rates are the pre-existing FPEAM static NH3 emission
+> factors from `emission_factors.csv`, rounded; per the FPEAM README those derive
+> from Goebes et al. (2003), Davidson et al. (2004) and the 17/14 NH3-to-N ratio.
 > The multiplicative form and all four modifier functions are an FPEAM
-> implementation choice and are not published parameterisations. Bouwman et al.
-> (2002) did not assess wind speed or precipitation. Across 3,104 CONUS counties
-> `f_T` accounts for essentially all spatial variance, and `f_wind` saturates its
-> 3 m/s cap for ~84% of counties. Treat all modifiers as provisional.
+> implementation choice and are not published parameterisations. Across 3,104
+> CONUS counties `f_T` accounts for essentially all spatial variance, and
+> `f_wind` saturates its 3 m/s cap for ~84% of counties. Treat all modifiers as
+> provisional.
 
-**Base rates** (bundled defaults: median volatilisation loss by fertilizer type reported in Bouwman et al. 2002):
+**Base rates** (bundled defaults: FPEAM's existing NH3 emission factors, from Goebes et al. 2003 via `emission_factors.csv`):
 
 | Fertilizer subtype | Base rate (lb NH3-N / lb N) | Notes |
 |---|---|---|
@@ -106,7 +109,7 @@ NH3_fraction = base_rate(subtype)
 
 **Important caveat — anhydrous ammonia application method**
 
-The Bouwman et al. (2002) base rate of 0.040 applies to **surface-applied** anhydrous ammonia.
+The base rate of 0.040 applies to **surface-applied** anhydrous ammonia.
 Anhydrous ammonia is often injected below the soil surface (deep injection), which results
 in near-zero atmospheric NH3 volatilisation because the gas reacts immediately with soil
 moisture and is retained.  If your equipment dataset represents injected anhydrous ammonia,
@@ -147,9 +150,15 @@ monthly value through unchanged.
 
 **References**
 
+- Goebes, M.D., Strader, R., Davidson, C. (2003). "An ammonia emission inventory
+  for fertilizer application in the United States." *Atmospheric Environment*,
+  37(18), 2539-2550. doi:10.1016/S1352-2310(03)00129-8
 - Bouwman, A.F. et al. (2002). "Estimation of global NH3 volatilization loss from
   synthetic fertilizers and animal manure applied to arable lands and grasslands."
   *Global Biogeochemical Cycles*, 16(2), 8-1 to 8-14. doi:10.1029/2000GB001389
+- Bash, J.O. et al. (2013). "Evaluation of a regional air-quality model with
+  bidirectional NH3 exchange coupled to an agroecosystem model."
+  *Biogeosciences*, 10, 1635-1645. doi:10.5194/bg-10-1635-2013
 
 ---
 
