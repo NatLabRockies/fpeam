@@ -22,8 +22,13 @@ loaded from a user-replaceable CSV (``ammonia_provider_params.csv``).
 
 Provenance and known limitations
 --------------------------------
-The per-subtype ``base_rate`` values are the median volatilisation losses by
-fertilizer type reported in Bouwman et al. (2002).
+The per-subtype ``base_rate`` values are NOT from Bouwman et al. (2002).  They
+are the pre-existing FPEAM static NH3 emission factors in
+``emission_factors.csv``, rounded to three decimals.  Per the FPEAM README
+those factors derive from the Carnegie Mellon University fertilizer ammonia
+inventory of Goebes et al. (2003) together with Davidson et al. (2004) and the
+17/14 NH3-to-N mass ratio.  The README also records that the Davidson et al.
+source could not be verified online as of 2018-07-02.
 
 The multiplicative form and the modifier functions are an FPEAM implementation
 choice and are NOT a published parameterisation.  Bouwman et al. (2002)
@@ -44,10 +49,18 @@ Two consequences are documented in the FY26 milestone memo:
 
 References
 ----------
+- Goebes, M.D., Strader, R., Davidson, C. (2003). "An ammonia emission
+  inventory for fertilizer application in the United States."
+  *Atmospheric Environment*, 37(18), 2539-2550.
+  doi:10.1016/S1352-2310(03)00129-8
 - Bouwman, A.F., Boumans, L.J.M., Batjes, N.H. (2002). "Estimation of global
   NH3 volatilization loss from synthetic fertilizers and animal manure applied
   to arable lands and grasslands." *Global Biogeochemical Cycles*, 16(2),
   8-1 to 8-14. doi:10.1029/2000GB001389
+- Bash, J.O., Cooter, E.J., Dennis, R.L., Walker, J.T., Pleim, J.E. (2013).
+  "Evaluation of a regional air-quality model with bidirectional NH3 exchange
+  coupled to an agroecosystem model." *Biogeosciences*, 10, 1635-1645.
+  doi:10.5194/bg-10-1635-2013
 - Pan, B., Lam, S.K., Mosier, A., Luo, Y., Chen, D. (2016). "Ammonia
   volatilization from synthetic fertilizers and its mitigation strategies:
   A global synthesis." *Agriculture, Ecosystems & Environment*, 232, 283-289.

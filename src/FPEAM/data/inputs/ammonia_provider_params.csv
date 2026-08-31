@@ -1,11 +1,15 @@
 # NH3 base-rate volatilisation fractions (lb NH3-N / lb N applied) at reference conditions
-# (T=15°C, wind=2 m/s, precip=0 mm, loam soil) derived from:
-#   Bouwman et al. (2002), Global Biogeochemical Cycles 16(2), doi:10.1029/2000GB001389
-#   median volatilisation loss by fertilizer type.
-# NOTE: only these base rates are from Bouwman et al. (2002). The modifier
-# functions in ammonia.py are an FPEAM implementation choice, not published.
-# These values are consistent with the static emission_factors.csv in this package
-# which was derived from the same source for the Billion Ton Study update.
+# (T=15C, wind=2 m/s, precip=0 mm, loam soil).
+# SOURCE: these are the pre-existing FPEAM static NH3 emission factors from
+# emission_factors.csv, rounded to three decimals. Per the FPEAM README those
+# factors derive from Goebes, Strader and Davidson (2003), "An ammonia emission
+# inventory for fertilizer application in the United States", Atmospheric
+# Environment 37(18):2539-2550, doi:10.1016/S1352-2310(03)00129-8, together with
+# Davidson et al. (2004) and the 17/14 NH3-to-N mass ratio. The README records
+# that the Davidson et al. source could not be verified online as of 2018-07-02.
+# These base rates are NOT from Bouwman et al. (2002).
+# The modifier functions in ammonia.py are an FPEAM implementation choice and
+# are not published parameterisations.
 # t_ref_c, w_ref_m_s, p_ref_mm define the reference condition used to normalise
 # the modifier functions so that all modifiers equal 1.0 at reference.
 resource_subtype,base_rate_nh3,t_ref_c,w_ref_m_s,p_ref_mm
