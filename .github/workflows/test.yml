@@ -14,7 +14,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.43.3
+          pixi-version: v0.68.1
           cache: true
 
       - name: Check formatting
