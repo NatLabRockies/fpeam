@@ -10,10 +10,18 @@ Model form
 ----------
 The provider applies a multiplicative model::
 
-    NH3_fraction = base_rate(fertilizer_subtype)
-                 × f_T(temperature_c)
-                 × f_wind(wind_speed_m_s)
-                 × f_pH(soil_ph)
+    nh3_rate = base_rate(fertilizer_subtype)
+             × f_T(temperature_c)
+             × f_wind(wind_speed_m_s)
+             × f_pH(soil_ph)
+
+The result is a mass of NH3 volatilized per unit mass of applied nitrogen, in
+lb NH3 / lb N. The bundled base rates already incorporate the 17/14 NH3-to-N
+mass ratio (see FPEAM's README), so they are NOT NH3-N loss fractions: a
+nitrogen loss fraction of 1.0 corresponds to 17/14 = 1.214 in these units. The
+modifier terms are dimensionless ratios, so applying the Zhan et al. (2021)
+corrections, which are fit to an NH3-N loss fraction, leaves the mass basis of
+the base rate unchanged.
 
 The multiplicative structure and the three modifier functions are those of
 Zhan et al. (2021), whose Eq. 1a expresses the cropland volatilization rate as
@@ -240,17 +248,6 @@ class AmmoniaFertilizerProvider(EmissionFactorProvider):
         standard error, 0.0509, exceeds the fitted value of 0.0429.
         """
         return np.exp(self.PH_EXPONENT * (np.clip(ph, self.PH_MIN, self.PH_MAX) - self._ph_ref))
-
-    @staticmethod
-    def _f_precipitation(p_mm):
-        """Inert. No published precipitation response was found.
-
-        Zhan et al. (2021) do not include a precipitation correction term, and
-        no published response for cumulative volatilization loss was located.
-        The term is retained at 1.0 so that ``precipitation_mm`` remains an
-        accepted context column without silently affecting results.
-        """
-        return pd.Series(1.0, index=getattr(p_mm, "index", None))
 
     # -- provider interface ------------------------------------------------
 

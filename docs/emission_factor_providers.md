@@ -125,7 +125,7 @@ is a test that asserts this.
 
 **Base rates** (bundled defaults: FPEAM's existing NH3 emission factors, from Goebes et al. 2003 via `emission_factors.csv`):
 
-| Fertilizer subtype | Base rate (lb NH3-N / lb N) | Notes |
+| Fertilizer subtype | Base rate (lb NH3 / lb N) | Notes |
 |---|---|---|
 | Anhydrous ammonia | 0.040 | See caveat below |
 | Ammonium nitrate | 0.008 | |
@@ -139,7 +139,7 @@ The base rate of 0.040 applies to **surface-applied** anhydrous ammonia.
 Anhydrous ammonia is often injected below the soil surface (deep injection), which results
 in near-zero atmospheric NH3 volatilisation because the gas reacts immediately with soil
 moisture and is retained.  If your equipment dataset represents injected anhydrous ammonia,
-the correct rate is approximately 0.003–0.010 lb NH3-N / lb N.
+the correct rate is approximately 0.003–0.010 lb NH3 / lb N.
 
 To model this distinction: supply a custom `provider_params` CSV that overrides the
 `anhydrous ammonia` base rate to reflect your application method.
