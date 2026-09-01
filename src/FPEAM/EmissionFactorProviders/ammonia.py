@@ -100,9 +100,11 @@ References
 Context columns consumed
 ------------------------
 temperature_c
-    Mean daily air temperature over the application period in C.
+    Mean daily air temperature over the period of crop growth, in C. Zhan et al.
+    (2021) fit f(A) against a growing-season mean, so a single application-month
+    value is not the quantity the coefficient describes.
 wind_speed_m_s
-    Mean wind speed at 10 m height in m/s.
+    Mean wind speed at 10 m height over the period of crop growth, in m/s.
 soil_ph
     Soil pH (1:1 H2O).
 precipitation_mm
